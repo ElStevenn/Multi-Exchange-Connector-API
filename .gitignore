@@ -2,3 +2,4 @@ src/.env
 src/venv
 .history
 security/*
+.terraform
