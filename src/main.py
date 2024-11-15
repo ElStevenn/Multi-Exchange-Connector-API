@@ -43,14 +43,6 @@ async def get_account_info(user_id: str):
 
     return {"user_id": user_id, "message": "Account info retrieved"}
 
-@app.post("/accounts/add-credentials", description="### Add API credentials for a user", tags=["Account Management"])
-async def account_add_credentials(request_body: AddCredentials):
-    """
-    Adds API credentials for a user's account.
-    """
-    # Store encrypted API credentials for the user
-    return {"message": "API credentials added successfully"}
-
 @app.delete("/accounts/remove/{account_id}", description="### Remove API credentials", tags=["Account Management"])
 async def delete_user_credentials(account_id: str):
     """

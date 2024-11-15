@@ -23,12 +23,6 @@ class AccountInfoResponse(BaseModel):
     email: str
     created_at: str
 
-class AddCredentials(BaseModel):
-    account_id: UUID4
-    api_key: str
-    secret_key: str
-    passphrase: str
-
 class RemoveAccountResponse(BaseModel):
     account_id: UUID4
     message: str

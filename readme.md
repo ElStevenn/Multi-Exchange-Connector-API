@@ -1,0 +1,6 @@
+
+
+
+### Used technologies
+ - Brightdata
+ - 

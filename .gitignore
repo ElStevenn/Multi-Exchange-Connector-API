@@ -1,5 +1,8 @@
 src/.env
 src/venv
-.history
+*.history
 security/*
 .terraform
+*.vscode
+
+*__pycache__
