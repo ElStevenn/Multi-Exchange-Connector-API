@@ -11,6 +11,7 @@ docker container rm $container_name
 # Remove image
 docker image rm $image_name
 
+# Test
 echo "Test? (y/n)"
 read test
 if [ "$test" == "y" ]; then

@@ -3,3 +3,9 @@ httpx
 python-dotenv
 aiohttp
 uvicorn
+pydantic
+pydantic[email]
+cryptography
+sqlalchemy
+asyncpg
+psycopg2

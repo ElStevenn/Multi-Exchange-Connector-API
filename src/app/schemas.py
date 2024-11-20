@@ -8,6 +8,7 @@ class RegisterUser(BaseModel):
     apikey: str
     secret_key: Optional[str] = None
     passphrase: str
+    given_ip: str
     
 class LoginUser(BaseModel):
     email: EmailStr

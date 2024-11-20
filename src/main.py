@@ -1,13 +1,34 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 
-from app.database import crud
-from app.schemas import *
+from src.app.database import crud
+from src.app.security import encrypt_data
+from src.app.schemas import *
+from src.app.proxy import BrightProxy
 
 app = FastAPI(
     title="Bitget API",
     summary="In this API you'll find everything about Bitget API integration."
 )
+
+origins = [
+    "http://0.0.0.0:80",
+    "http://localhost:8000",
+    "http://3.143.209.3/",
+    
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+proxy_manager = BrightProxy()
 
 # AUTHENTICATION (Public - Accessible from Frontend)
 @app.post("/auth/register", description="### Register a new account", tags=["User Authentication"])
@@ -15,6 +36,10 @@ async def add_new_account(request_body: RegisterUser):
     """
     Registers a new user account with Bitget API credentials.
     """
+
+    # Test credentials and see if it works
+
+    # Save encrypted credentials
     
     return {"message": "Account registered successfully"}
 
@@ -25,6 +50,13 @@ async def login_account(request_body: LoginUser):
     """
 
     return {"message": "Login successful"}
+
+@app.get("/proxy/public-ip", description="### Retrives the public IP address of the static proxy\n\nThis is then used to connect with the Bitget API", tags=["User Authentication"])
+async def get_proxy_ip():
+    
+    ip = await proxy_manager.select_ip()
+
+    return {'proxy_ip': ip}
 
 @app.post("/auth/refresh-token", description="### Refresh access token", tags=["User Authentication"])
 async def refresh_token():

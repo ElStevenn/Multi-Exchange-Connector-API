@@ -1,8 +1,12 @@
 src/.env
 src/venv
+src/security/*
+
 *.history
-security/*
-.terraform
 *.vscode
 
 *__pycache__
+
+.terraform
+*sensitive.tfvars
+*.terraform.lock.hcl
