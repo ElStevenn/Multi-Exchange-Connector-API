@@ -5,10 +5,11 @@ from typing import Optional, Literal, List
 """Authentication"""
 class RegisterUser(BaseModel):
     email: EmailStr
+    account_name: str
     apikey: str
-    secret_key: Optional[str] = None
+    secret_key: str
     passphrase: str
-    given_ip: str
+    ip: str
     
 class LoginUser(BaseModel):
     email: EmailStr

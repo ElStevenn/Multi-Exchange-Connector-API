@@ -1,10 +1,68 @@
-from src.config import PUBLIC_KEY, PRIVATE_KEY
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
-import base64
+from fastapi.security import OAuth2PasswordBearer
+from fastapi import HTTPException, Depends
+from datetime import datetime, timedelta
+from typing import Annotated
+from uuid import UUID
+import base64, jwt
+
+from src.config import PUBLIC_KEY, PRIVATE_KEY, JWT_SECRET_KEY
+
+ALGORITHM = "HS256"
+TOKEN_EXPIRE_DAYS = 30
+
+#  - - - - - BEABER TOKEN - - - - - 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+def encode_session_token(user_id: str):
+    expiration = datetime.utcnow() + timedelta(days=TOKEN_EXPIRE_DAYS)
+    payload = {
+        "sub": user_id,  
+        "exp": expiration 
+    }
+    token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=ALGORITHM)
+    return token
+
+
+def decode_session_token(token: str):
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        return user_id
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=401, 
+            detail="Session has expired",
+            headers={"WWW-Authenticate": "Bearer"}
+            )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"}  
+        )
+
+async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+    user_id = decode_session_token(token)
+    return UUID(user_id)
+
+
+async def get_user_id(token: Annotated[str, Depends(oauth2_scheme)]):
+    # Get user id only
+    user_id = decode_session_token(token)
+    return user_id
+
+
+async def get_current_active_user(
+        current_user_credentials: Annotated[tuple[dict, str], Depends(get_user_id)]
+    ):
+    user_id = current_user_credentials  
+    return user_id
 
 
 
+# - - - - - ENCRYPTION - - - - - 
 def encrypt_data(plain_text: str) -> str:
     encrypted = PUBLIC_KEY.encrypt(
         plain_text.encode(),
@@ -28,7 +86,16 @@ def decrypt_data(encrypted_data: str) -> str:
     )
     return decrypt_data.decode('utf-8')
 
+
+def security_testing():
+    encrypted_apikey = ""
+    encrypted_passphrase = ""
+
+    decrypted_apikey = decrypt_data(encrypted_apikey); print("APIKEY -> ", decrypted_apikey)
+    decrypted_passphrase = decrypt_data(encrypted_passphrase); print("PASSPHRASE -> ", decrypted_passphrase)
+
 if __name__ == "__main__":
+    security_testing()
     # # Example to encrypt
     # plain_text = "password123"
     # encrypted_password = encrypt_data(plain_text)

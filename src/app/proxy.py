@@ -6,11 +6,12 @@ import httpx
 import sys
 import json
 import random
-from typing import Optional
+from typing import Optional, Literal
+from fastapi import HTTPException
 
 from src.config import BRIGHTDATA_API_TOKEN
 from src.app.utils import IpsManagement
-from src.app.database.crud import select_used_ips
+from src.app.database.crud import get_used_ips
 
 ips_management = IpsManagement()
 
@@ -21,12 +22,39 @@ class BrightProxy:
     """
     def __init__(self) -> None:
         self.base_url = "https://api.brightdata.com"
-        self.zones = ["main_zone"]
+        self.zones = ["isp_proxy1"]
+        self.proxy_address = "brd.superproxy.io:22225"
+        self.proxy_pass = None     
+        self.customer_id = "hl_9f87e5f6"
+
+    @classmethod
+    async def create(cls):
+        instance = cls()
+        await instance.set_password()
+        return instance
+    
+    async def set_password(self):
+        try:
+            url = f"{self.base_url}/zone?zone={self.zones[0]}"
+            headers = {"Authorization": f"Bearer {BRIGHTDATA_API_TOKEN}"}
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, headers=headers)
+                if response.status_code == 200:
+                    response_data = response.json()
+
+                    # Set proxy password
+                    self.proxy_pass = response_data.get('password', None)[0]
+
+                else:
+                    raise Exception(f"API returned error: {response.status_code}, {response.text}")
+        except Exception as e:
+            raise Exception(f"Error during set_password: {e}")
 
     async def configure_proxy(self, proxy_address: str, proxy_user: str, proxy_pass: str, test_url: str):
         """Configure and test proxy"""
         proxies = {
-            "http": f"http://{proxy_user}:{proxy_pass}@{proxy_address}",
+            "http": f"http://{proxy_user}:{proxy_pass}t{proxy_address}",
             "https": f"http://{proxy_user}:{proxy_pass}@{proxy_address}",
         }
 
@@ -41,21 +69,11 @@ class BrightProxy:
                 return {
                     "error": str(e)
                 }
- 
-    async def get_zone_details(self):
-        url = "https://api.brightdata.com/proxies"
-        headers = {"Authorization": f"Bearer {BRIGHTDATA_API_TOKEN}"}
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers)
-            if response.status_code == 200:
-                return response.json()  
-            else:
-                return {"error": response.text}
-
-    async def curl_api(self, url: str, proxy_address: str, customer_id: str, proxy_pass: str, ip: Optional[str] = None):
+            
+    async def curl_api(self, url: str, method: Literal['GET', 'POST', 'PUT', 'DELETE'] = 'GET',  body: Optional[dict] = {}, headers: Optional[dict] = {}, ip: Optional[str] = None):
         """Send CURL sol using static PROXY and ensure JSON response"""
-        proxy_url = f"http://{customer_id}{'-ip-' + ip if ip else ''}:{proxy_pass}@{proxy_address}"
-
+        proxy_url = f"http://brd-customer-{self.customer_id}-zone-{self.zones[0]}{'-ip-' + ip if ip else ''}:{self.proxy_pass}@{self.proxy_address}"
+        print("proxy url", proxy_url)
         proxies = {
             "http://": proxy_url,
             "https://": proxy_url,
@@ -63,14 +81,24 @@ class BrightProxy:
 
         async with httpx.AsyncClient(proxies=proxies) as client:
             try:
-                response = await client.get(url)
+                if method == "GET":
+                    response = await client.get(url, params=body, headers=headers)
+                elif method == "POST":
+                    response = await client.post(url, json=body, headers=headers)
+                elif method == "PUT":
+                    response = await client.put(url, json=body, headers=headers)
+                elif method == "DELETE":
+                    response = await client.delete(url, json=body, headers=headers)
+                else:
+                    raise ValueError(f"Unsupported HTTP method: {method}")
+                
                 try:
                     return response.json()
                 except ValueError:
                     # If not JSON, wrap response in a JSON object
                     return {
                         "status": response.status_code,
-                        "content": response.text.strip() 
+                        "content": response.text.strip()
                     }
             except httpx.RequestError as e:
                 # Return error in JSON format
@@ -102,7 +130,7 @@ class BrightProxy:
 
     async def select_ip(self):
         """Select IP to set user new IP"""
-        used_ips = await select_used_ips()
+        used_ips = await get_used_ips()
         alocated_ips = await self.get_allocated_ips()
 
         ip_usage = {ip: 0 for ip in alocated_ips}
@@ -119,27 +147,26 @@ class BrightProxy:
         return select_ip
 
 
-    async def add_static_ip(self, ):
-        pass
-        
 
-async def main_testings():
-    proxy = BrightProxy()
+async def proxy_testing():
+    proxy = await BrightProxy.create()
 
-    # Test PROXY with static IP
-    """
+    # Zones
+    zones = await proxy.get_zones(); print("Zones:", zones)
+
+    # Current asociated Ips
+    ips = await proxy.get_allocated_ips(); print("Asociated Ips:", ips)
+
+    # Curl Test
     result = await proxy.curl_api(
         url="https://ifconfig.me/all.json",
-        proxy_address="brd.superproxy.io:22225",
-        customer_id="brd-customer-hl_b6ea2507-zone-main_zone",
-        proxy_pass="m02xj2u0a186",
-        ip="58.97.235.32"
+        method='GET',
+        ip="185.246.219.114"
     );print(result)
-    """
+    
 
-    # Scripts
-    res = await proxy.select_ip()
-    print("result -> ",res)
+
+  
 
 if __name__ == "__main__":
-    asyncio.run(main_testings())
+    asyncio.run(proxy_testing())
