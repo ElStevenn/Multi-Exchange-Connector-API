@@ -97,9 +97,40 @@ async def register_new_account(session: AsyncSession, user_id: str, account_id: 
     return account.account_id
 
 @db_connection
-async def get_account_information(session: AsyncSession, email):
-    """Get trading account information from given email"""
-    pass
+async def get_main_account(session: AsyncSession, user_id: str) -> str:
+    """Get main trading account"""
+    result = await session.execute(
+        select(Account)
+        .where(
+            and_(
+                Account.user_id == user_id,
+                Account.type == 'main-account'
+            )
+        )
+    )
+
+    main_account = result.scalar_one_or_none()
+
+    if not main_account:
+        return None
+    
+    return main_account.account_id, main_account.proxy_ip
+
+# - - - USER - - -
+@db_connection
+async def get_user_data(session: AsyncSession, user_id: str):
+    """Get user information (User table)"""
+    result = await session.execute(
+        select(Users)
+        .where(Users.id == user_id)
+    )
+
+    user = result.scalar_one_or_none()
+
+    if not user:
+        return None
+    
+    return {"username": user.username, "name": user.name, "surname": user.surname, "email": user.email, "role": user.role}
 
 
 # - - - CREDENTIALS - - - 
@@ -119,12 +150,32 @@ async def add_user_credentials(session: AsyncSession, account_id: str, encrypted
     await session.refresh(credentials)
     return credentials.id
 
+@db_connection
+async def get_account_credentials(session: AsyncSession, account_id: str):
+    """Get exchange credentials """
+    result = await session.execute(
+        select(UserCredentials)
+        .where(UserCredentials.account_id == account_id)
+    )
+
+    credentials: UserCredentials = result.scalar_one_or_none()
+
+    if not credentials:
+        raise HTTPException(status_code=404, detail="Credentials not found")
+
+    return {
+        "apikey": credentials.get_apikey(),
+        "secret_key": credentials.get_secret_key(),
+        "passphrase": credentials.get_passphrase(),
+    }
+
 
 async def database_crud_testing():
-    # used_ips = await get_used_ips(); print("Used Ips -> ", used_ips)
-    await register_new_account("","","","","")
-    
+    user_id = "49898f05-bc00-4d4b-87fd-212885b8cf28"
+    account_id = "1530240371"
 
+    result = await get_main_account(user_id=user_id)
+    print(result)
 
 if __name__ == "__main__":
     asyncio.run(database_crud_testing())

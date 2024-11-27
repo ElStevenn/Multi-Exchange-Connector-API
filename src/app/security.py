@@ -60,7 +60,20 @@ async def get_current_active_user(
     user_id = current_user_credentials  
     return user_id
 
+async def get_current_active_account(
+        current_user_credentials: Annotated[tuple[dict, str], Depends(get_user_id)]
+):
+    """Get user and all its credentials for its main account"""
+    from src.app.database.crud import get_main_account, get_account_credentials
 
+    # Get main account
+    user_id = current_user_credentials
+    main_account_id, proxy_ip = await get_main_account(user_id=user_id)
+    
+    # Get account credentials
+    account_api_keys = await get_account_credentials(account_id=main_account_id)
+
+    return user_id, proxy_ip, account_api_keys['apikey'], account_api_keys['secret_key'], account_api_keys['passphrase']
 
 # - - - - - ENCRYPTION - - - - - 
 def encrypt_data(plain_text: str) -> str:

@@ -7,10 +7,14 @@ pipeline {
     }
 
     stages {
-        stage('Checkout Code') {
+        stage('Code checkout') {
             steps {
                 echo 'Checking out the code..'
             }
+        }
+
+        stage('Static code analysis') {
+            echo 'Analysing the static code throught SonarQube'
         }
 
         stage('Install Dependencies') {

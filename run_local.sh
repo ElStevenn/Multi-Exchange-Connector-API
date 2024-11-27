@@ -24,7 +24,7 @@ read res1
 if [ "$res1" == "y" ];then
     # Build and run image
     docker build -t $image_name .
-    docker run 
+    docker run -d --name $container_name -p 8001:8001 $image_name
 
     # Debug
     echo "Wanna see the logs?(y/n)"

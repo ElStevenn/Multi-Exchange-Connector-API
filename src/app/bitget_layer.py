@@ -98,7 +98,13 @@ async def main_test_bitget():
     ip = "185.246.219.114"
 
     # Account Information
-
+    bitget_connection = BitgetLayerConnection(
+        api_key="bg_1cf35b8ca56123b1fc4fb00909cffa45",
+        api_secret_key="26df4b9bb4e719028c3f4e02d19330121e10d3cb611a66300160be962b8120d0",
+        passphrase="Skyfall97Zoom42",
+        proxy=proxy,
+        ip=ip
+    )
     
     # Account Information
     acc_info = await bitget_connection.get_account_information()

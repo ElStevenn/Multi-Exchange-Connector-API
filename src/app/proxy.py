@@ -1,4 +1,3 @@
-import hmac
 import asyncio
 import hashlib
 import base64
@@ -23,7 +22,7 @@ class BrightProxy:
     def __init__(self) -> None:
         self.base_url = "https://api.brightdata.com"
         self.zones = ["isp_proxy1"]
-        self.proxy_address = "brd.superproxy.io:22225"
+        self.proxy_address = f"brd.superproxy.io:33335"
         self.proxy_pass = None     
         self.customer_id = "hl_9f87e5f6"
 
@@ -147,10 +146,25 @@ class BrightProxy:
         return select_ip
 
 
+    async def status(self):
+        """Get recent proxy status"""
+        url = f"https://brightdata.com/api/zone/route_ips/zone={self.zones[0]}"
+        headers = {"Authorization": f"Bearer {BRIGHTDATA_API_TOKEN}"}
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers)
+
+        print(response.text)
+
+
+ 
 
 async def proxy_testing():
     proxy = await BrightProxy.create()
 
+    
+    # Proxy Status
+    # status = await proxy.status(); print(status)
+    
     # Zones
     zones = await proxy.get_zones(); print("Zones:", zones)
 
@@ -163,6 +177,9 @@ async def proxy_testing():
         method='GET',
         ip="185.246.219.114"
     );print(result)
+
+    # Get IP
+    ip = await proxy.select_ip(); print("ip selected", ip)
     
 
 
