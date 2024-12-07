@@ -7,7 +7,8 @@ from src.app.database import crud
 from src.app.security import encrypt_data, get_current_active_user, get_current_active_account
 from src.app.schemas import *
 from src.app.proxy import BrightProxy
-from src.app.bitget_layer import BitgetLayerConnection
+from src.app.exchanges.bitget_layer import BitgetLayerConnection
+from src.app.exchanges.exchange_utils import validate_account
 
 app = FastAPI(
     title="Multi-Exchange Connector API",
@@ -27,22 +28,21 @@ app.add_middleware(
 proxy_manager = BrightProxy()
 
 # AUTHENTICATION (Public - Accessible from Frontend)
-@app.post("/auth/register", description="### Register a new account\n\n**IMPORTANT**API Connection Only works with HMAC Signature, so use HMAC only", tags=["User Authentication"])
-async def add_new_account(user_id: Annotated[tuple[dict, str], Depends(get_current_active_user)], request_body: RegisterUser):
-
-
+@app.post("/auth/register/{user_id}", description="### Register a new account\n\n**IMPORTANT**API Connection Only works with HMAC Signature, so use HMAC only", tags=["User Authentication"])
+async def add_new_account( user_id: str,request_body: RegisterUser):
+    # user_id: Annotated[tuple[dict, str], Depends(get_current_active_user)],
     proxy = await BrightProxy.create()
-    bitget_account = BitgetLayerConnection(
-        api_key=request_body.apikey,
-        api_secret_key=request_body.secret_key,
-        passphrase=request_body.passphrase,
-        proxy=proxy,
-        ip=request_body.ip
-    )
 
     # Validate Proxy IP and get account ID
-    account_information = await bitget_account.get_account_information()
-    account_id = account_information.get('userId')
+    account_information, account_id = await validate_account(
+        exchange='bitget',
+        proxy=proxy,
+        apikey=request_body.apikey,
+        secret_key=request_body.secret_key,
+        passphrase=request_body.passphrase,
+        proxy_ip=request_body.ip,
+    )
+    # account_id = account_information.get('userId')
 
     # Register new account
     await crud.register_new_account(
@@ -50,16 +50,17 @@ async def add_new_account(user_id: Annotated[tuple[dict, str], Depends(get_curre
         account_id=account_id,
         email=request_body.email,
         account_name=request_body.account_name,
-        account_type=None,
+        account_type='sub-account',
         proxy_ip=request_body.ip
     )
 
     # Add user credentials
     await crud.add_user_credentials(
         account_id=account_id,
-        encrypted_apikey=encrypt_data(request_body.apikey),
-        encrypted_secretkey=encrypt_data(request_body.secret_key),
-        encrypted_passphrase=encrypt_data(request_body.passphrase)
+        encrypted_apikey=encrypt_data(request_body.apikey) if request_body.apikey else None,
+        encrypted_secretkey=encrypt_data(request_body.secret_key) if request_body.secret_key else None,
+        encrypted_passphrase=encrypt_data(request_body.passphrase) if request_body.passphrase else None,
+
     )
 
     return account_information

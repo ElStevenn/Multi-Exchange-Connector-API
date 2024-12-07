@@ -1,10 +1,12 @@
 from pydantic import BaseModel, EmailStr, UUID4
 from typing import Optional, Literal, List
+from src.config import AVARIABLE_EXCHANGES
 
 
 """Authentication"""
 class RegisterUser(BaseModel):
     email: EmailStr
+    exchange: Literal[*AVARIABLE_EXCHANGES]
     account_name: str
     apikey: str
     secret_key: str

@@ -1,7 +1,7 @@
 pipeline {
     agent any
     enviroment {
-        DOCKER_IMAGE = 'bitget-api'
+        DOCKER_IMAGE = 'multi-exchange-connector'
         DOCKER_REGISRY = 'docker-registry.hub'
         DOCKER_CREDENTIALS = 'docker-credentials'
     }
@@ -58,4 +58,5 @@ pipeline {
             echo 'Pipeline failed'
         }
     }
+
 }

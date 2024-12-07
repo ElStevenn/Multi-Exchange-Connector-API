@@ -135,15 +135,22 @@ async def get_user_data(session: AsyncSession, user_id: str):
 
 # - - - CREDENTIALS - - - 
 @db_connection
-async def add_user_credentials(session: AsyncSession, account_id: str, encrypted_apikey: str, encrypted_secretkey, encrypted_passphrase):
+async def add_user_credentials(session: AsyncSession, account_id: str, exchange: str, encrypted_apikey: str = None, encrypted_secretkey = None, encrypted_passphrase = None, encrypted_oauth2_token = None):
     """Add user credentials associated with a user account."""
     credentials = UserCredentials(
         account_id=account_id,
+        exchange_name=exchange
     )
 
-    credentials.set_encrypted_apikey(encrypted_apikey)
-    credentials.set_encrypted_secret_key(encrypted_secretkey)
-    credentials.set_encrypted_passphrase(encrypted_passphrase)  # **Fixed Line**
+    if encrypted_apikey:
+        credentials.set_encrypted_apikey(encrypted_apikey)
+    if encrypted_secretkey:
+        credentials.set_encrypted_secret_key(encrypted_secretkey)
+    if encrypted_passphrase:
+        credentials.set_encrypted_passphrase(encrypted_passphrase)
+    credentials.set_encrypted_passphrase(encrypted_passphrase)
+    if encrypted_oauth2_token:
+        credentials.set_encrypted_oauth2_token(encrypted_oauth2_token)
     
     session.add(credentials)
     await session.flush()

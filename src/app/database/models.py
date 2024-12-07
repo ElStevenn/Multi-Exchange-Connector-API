@@ -59,7 +59,7 @@ class UserConfiguration(Base):
     webpage_url = Column(Text)
     oauth_synced = Column(Boolean, default=True)
     picture_synced = Column(Boolean, default=True)
-    trading_experience = Column(String(20), default='new')  # Less than 1 year, 1-2 years, etc.
+    trading_experience = Column(String(20), default='new')
     main_used_exchange = Column(Text, default="bitget")  # 'bitget', 'binance', etc.
     public_email = Column(String(255))
 
@@ -89,6 +89,7 @@ class Account(Base):
     type = Column(String(255))
     email = Column(String(255))
     proxy_ip = Column(String(255))
+    account_permissions = Column(String(255))
 
     # One-to-many relationships
     historical_pnls = relationship("Historical_PNL", back_populates="account", cascade="all, delete-orphan")
@@ -128,9 +129,11 @@ class UserCredentials(Base):
 
     id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     account_id = Column(String(255), ForeignKey('accounts.account_id'), nullable=False)
-    encrypted_apikey = Column(LargeBinary, nullable=False)
-    encrypted_secret_key = Column(LargeBinary, nullable=False)
-    encrypted_passphrase = Column(LargeBinary, nullable=False)
+    exchange_name = Column(String(255), nullable=False)
+    encrypted_apikey = Column(LargeBinary, nullable=True)
+    encrypted_secret_key = Column(LargeBinary, nullable=True)
+    encrypted_passphrase = Column(LargeBinary, nullable=True)
+    oauth2_token = Column(LargeBinary, nullable=True)
 
     # Many-to-one relationship with Account
     account = relationship("Account", back_populates="user_credentials")
@@ -144,6 +147,9 @@ class UserCredentials(Base):
 
     def set_encrypted_passphrase(self, encrypted_passphrase: str):
         self.encrypted_passphrase = base64.b64decode(encrypted_passphrase.encode('utf-8'))
+
+    def set_encrypted_oauth2_token(self, encrypted_oauth2_token: str):
+        self.oauth2_token = base64.b64decode(encrypted_oauth2_token.encode('utf-8'))
 
     def get_apikey(self):
         decrypted_apikey = PRIVATE_KEY.decrypt(
@@ -177,6 +183,18 @@ class UserCredentials(Base):
             )
         )
         return decrypted_passphrase.decode('utf-8')
+
+    def get_oauth2_token(self):
+        decrypted_oauth2_token = PRIVATE_KEY.decrypt(
+            self.oauth2_token,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+        return decrypted_oauth2_token.decode('utf-8')
+
 
 
 class RiskManagement(Base):

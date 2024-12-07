@@ -9,10 +9,8 @@ from typing import Optional, Literal
 from fastapi import HTTPException
 
 from src.config import BRIGHTDATA_API_TOKEN
-from src.app.utils import IpsManagement
 from src.app.database.crud import get_used_ips
 
-ips_management = IpsManagement()
 
 class BrightProxy:
     """
