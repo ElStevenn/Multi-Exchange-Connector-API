@@ -6,11 +6,11 @@ from src.config import AVARIABLE_EXCHANGES
 """Authentication"""
 class RegisterUser(BaseModel):
     email: EmailStr
-    exchange: Literal[*AVARIABLE_EXCHANGES]
+    exchange: Literal['bitget', 'okx', 'kucoin']
     account_name: str
-    apikey: str
-    secret_key: str
-    passphrase: str
+    apikey: Optional[str] = None
+    secret_key: Optional[str] = None
+    passphrase: Optional[str] = None
     ip: str
     
 class LoginUser(BaseModel):

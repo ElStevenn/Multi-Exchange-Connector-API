@@ -73,7 +73,7 @@ resource "aws_instance" "multiexchange_api" {
   }
 
   tags = {
-    Name = "Exchange connector"
+    Name = "Multi Exchange Layer"
     Type = "Routing"
   }
 
@@ -97,9 +97,9 @@ resource "aws_instance" "multiexchange_api" {
     inline = [
       "tar -xzf /home/ubuntu/multi-exchange.tar.gz -C /home/ubuntu/",
       "rm /home/ubuntu/multi-exchange.tar.gz",
-      "chmod +x /home/ubuntu/multi-exchange/scripts/*",
+      "chmod +x /home/ubuntu/Multi-Exchange-Connector-API/scripts/*",
       # CI
-      "./home/ubuntu/multi-exchange/scripts/user_data.sh"
+      "bash /home/ubuntu/Multi-Exchange-Connector-API/scripts/CI/user_data.sh"
     ]
 
     connection {
@@ -108,7 +108,7 @@ resource "aws_instance" "multiexchange_api" {
       private_key = file("../../src/security/instance_key")
       host        = self.public_ip
     }
-
   }
+
 
 }

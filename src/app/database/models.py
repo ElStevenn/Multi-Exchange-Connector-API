@@ -1,5 +1,5 @@
-from sqlalchemy import String, Float, DateTime, Text, ForeignKey, JSON, BIGINT, Column, func, Integer, Numeric, INT, LargeBinary, Boolean
-from sqlalchemy.dialects.postgresql import UUID as pgUUID
+from sqlalchemy import String, Float, DateTime, Text, ForeignKey, BIGINT, Column, func, Integer, Numeric, INT, LargeBinary, Boolean
+from sqlalchemy.dialects.postgresql import UUID as pgUUID, JSON
 from sqlalchemy.orm import relationship, declarative_base
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -89,7 +89,7 @@ class Account(Base):
     type = Column(String(255))
     email = Column(String(255))
     proxy_ip = Column(String(255))
-    account_permissions = Column(String(255))
+    account_permissions = Column(JSON)
 
     # One-to-many relationships
     historical_pnls = relationship("Historical_PNL", back_populates="account", cascade="all, delete-orphan")

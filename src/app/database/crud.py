@@ -55,7 +55,7 @@ async def get_used_ips(session: AsyncSession):
 
 # - - - ACCOUNTS - - - 
 @db_connection
-async def register_new_account(session: AsyncSession, user_id: str, account_id: str, email: str, account_name: str, account_type: str = None, proxy_ip: str = None) -> str:
+async def register_new_account(session: AsyncSession, user_id: str, account_id: str, email: str, account_name: str, permissions: str,account_type: str = None, proxy_ip: str = None) -> str:
     """Register a new trading account."""
     
     # Check if the account already exists
@@ -88,7 +88,8 @@ async def register_new_account(session: AsyncSession, user_id: str, account_id: 
         account_name=account_name,
         type=account_type,
         email=email,
-        proxy_ip=proxy_ip
+        proxy_ip=proxy_ip,
+        account_permissions=permissions
     )
 
     session.add(account)
@@ -115,6 +116,57 @@ async def get_main_account(session: AsyncSession, user_id: str) -> str:
         return None
     
     return main_account.account_id, main_account.proxy_ip
+
+@db_connection
+async def get_account_credentials(session: AsyncSession, account_id: str):
+    """Get exchange credentials """
+    result = await session.execute(
+        select(UserCredentials)
+        .where(UserCredentials.account_id == account_id)
+    )
+
+    credentials: UserCredentials = result.scalar_one_or_none()
+
+    if not credentials:
+        raise HTTPException(status_code=404, detail="Credentials not found")
+
+    return {
+        "apikey": credentials.get_apikey(),
+        "secret_key": credentials.get_secret_key(),
+        "passphrase": credentials.get_passphrase(),
+        "exchange_name": credentials.exchange_name
+    }
+
+    
+
+@db_connection
+async def get_accounts(session: AsyncSession, user_id: str):
+    """Get user accounts"""
+    result = await session.execute(
+        select(Account)
+        .where(Account.user_id == user_id)
+    )
+
+    result = result.scalars().all()
+
+    accounts = [{"id": account.account_id, "proxy_ip": account.proxy_ip, "account_name": account.account_name} for account in result]  
+    return accounts
+
+
+@db_connection
+async def get_account(session: AsyncSession, account_id: str):
+    """Get account"""
+    result = await session.execute(
+        select(Account)
+        .where(Account.account_id == account_id)
+    )
+
+    result = result.scalar_one_or_none()
+
+    if not result:
+        return None
+    
+    return {"id": result.account_id, "proxy_ip": result.proxy_ip, "account_name": result.account_name}
 
 # - - - USER - - -
 @db_connection
@@ -157,31 +209,16 @@ async def add_user_credentials(session: AsyncSession, account_id: str, exchange:
     await session.refresh(credentials)
     return credentials.id
 
-@db_connection
-async def get_account_credentials(session: AsyncSession, account_id: str):
-    """Get exchange credentials """
-    result = await session.execute(
-        select(UserCredentials)
-        .where(UserCredentials.account_id == account_id)
-    )
 
-    credentials: UserCredentials = result.scalar_one_or_none()
+# - - - USER ACCOUNT - - - 
 
-    if not credentials:
-        raise HTTPException(status_code=404, detail="Credentials not found")
-
-    return {
-        "apikey": credentials.get_apikey(),
-        "secret_key": credentials.get_secret_key(),
-        "passphrase": credentials.get_passphrase(),
-    }
 
 
 async def database_crud_testing():
-    user_id = "49898f05-bc00-4d4b-87fd-212885b8cf28"
+    user_id = "2141ec7d-8156-4462-9a8e-0cf37b11997d"
     account_id = "1530240371"
 
-    result = await get_main_account(user_id=user_id)
+    result = await get_main_account("2141ec7d-8156-4462-9a8e-0cf37b11997d")
     print(result)
 
 if __name__ == "__main__":

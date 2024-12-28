@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Restart Container
-image_name=bitget_api
-container_name=bitget_apiv1
+image_name=multiexchange_api
+container_name=multiexchange_apiv2
+network=my_network
 
 # Stop and remove container
 docker container stop $container_name
@@ -24,7 +25,7 @@ read res1
 if [ "$res1" == "y" ];then
     # Build and run image
     docker build -t $image_name .
-    docker run -d --name $container_name -p 8001:8001 $image_name
+    docker run -d --name $container_name -p 8001:8001 --network $network $image_name 
 
     # Debug
     echo "Wanna see the logs?(y/n)"

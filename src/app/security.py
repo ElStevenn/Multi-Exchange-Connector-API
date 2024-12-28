@@ -73,7 +73,7 @@ async def get_current_active_account(
     # Get account credentials
     account_api_keys = await get_account_credentials(account_id=main_account_id)
 
-    return user_id, proxy_ip, account_api_keys['apikey'], account_api_keys['secret_key'], account_api_keys['passphrase']
+    return user_id, proxy_ip, account_api_keys['apikey'], account_api_keys['secret_key'], account_api_keys['passphrase'], account_api_keys['exchange_name']
 
 # - - - - - ENCRYPTION - - - - - 
 def encrypt_data(plain_text: str) -> str:

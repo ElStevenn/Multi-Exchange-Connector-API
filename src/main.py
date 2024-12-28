@@ -1,48 +1,76 @@
+from typing import Annotated, Optional
+from datetime import datetime, timedelta, timezone as tz
+import asyncio, json
+
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Response, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Annotated, Optional
-import asyncio
+from fastapi.responses import JSONResponse
 
 from src.app.database import crud
 from src.app.security import encrypt_data, get_current_active_user, get_current_active_account
-from src.app.schemas import *
+from src.app.schemas import (
+    RegisterUser,
+    LoginUser,
+    TradeRequest,
+    CloseTradeRequest,
+    ScheduledTradeRequest,
+    SetRiskManagementRequest,
+)
 from src.app.proxy import BrightProxy
 from src.app.exchanges.bitget_layer import BitgetLayerConnection
-from src.app.exchanges.exchange_utils import validate_account
+from src.app.exchanges.exchange_utils import validate_account, get_account_assets_
+
+from src.config import DOMAIN
 
 app = FastAPI(
     title="Multi-Exchange Connector API",
-    description="The **Multi-Exchange Connector API** provides a unified interface for managing cryptocurrency trading accounts and operations across multiple exchanges. It enables users to securely register, authenticate, and manage API credentials, retrieve account balances and assets, execute trades, and configure risk management settings. With support for dynamic proxy management and seamless integration, this API is designed to enhance trading workflows and ensure secure, efficient access to various exchanges."
+    description=(
+        "The **Multi-Exchange Connector API** provides a unified interface for managing "
+        "cryptocurrency trading accounts and operations across multiple exchanges. It "
+        "enables users to securely register, authenticate, and manage API credentials, "
+        "retrieve account balances and assets, execute trades, and configure risk "
+        "management settings. With support for dynamic proxy management and seamless "
+        "integration, this API is designed to enhance trading workflows and ensure "
+        "secure, efficient access to various exchanges."
+    ),
 )
-
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost", "http://localhost:8001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-proxy_manager = BrightProxy()
-
+# ------------------------------------------------------------------------------
 # AUTHENTICATION (Public - Accessible from Frontend)
-@app.post("/auth/register/{user_id}", description="### Register a new account\n\n**IMPORTANT**API Connection Only works with HMAC Signature, so use HMAC only", tags=["User Authentication"])
-async def add_new_account( user_id: str,request_body: RegisterUser):
-    # user_id: Annotated[tuple[dict, str], Depends(get_current_active_user)],
+# ------------------------------------------------------------------------------
+@app.post(
+    "/auth/register",
+    description=(
+        "### Register a new account\n\n"
+        "**IMPORTANT**\n"
+        "API Connection Only works with HMAC Signature, so use HMAC only"
+    ),
+    tags=["User Authentication"],
+)
+async def add_new_account(
+    user_id: Annotated[tuple[dict, str], Depends(get_current_active_user)],
+    request_body: RegisterUser,
+    response: Response,
+):
     proxy = await BrightProxy.create()
 
     # Validate Proxy IP and get account ID
-    account_information, account_id = await validate_account(
-        exchange='bitget',
+    account_id, permissions = await validate_account(
+        exchange=request_body.exchange,
         proxy=proxy,
         apikey=request_body.apikey,
         secret_key=request_body.secret_key,
         passphrase=request_body.passphrase,
         proxy_ip=request_body.ip,
     )
-    # account_id = account_information.get('userId')
 
     # Register new account
     await crud.register_new_account(
@@ -50,8 +78,9 @@ async def add_new_account( user_id: str,request_body: RegisterUser):
         account_id=account_id,
         email=request_body.email,
         account_name=request_body.account_name,
-        account_type='sub-account',
-        proxy_ip=request_body.ip
+        permissions=permissions,
+        account_type=None,
+        proxy_ip=request_body.ip,
     )
 
     # Add user credentials
@@ -60,119 +89,225 @@ async def add_new_account( user_id: str,request_body: RegisterUser):
         encrypted_apikey=encrypt_data(request_body.apikey) if request_body.apikey else None,
         encrypted_secretkey=encrypt_data(request_body.secret_key) if request_body.secret_key else None,
         encrypted_passphrase=encrypt_data(request_body.passphrase) if request_body.passphrase else None,
-
+        exchange=request_body.exchange,
     )
 
-    return account_information
+    # Get available accounts
+    accounts = await crud.get_accounts(user_id=user_id)
+
+    response.set_cookie(
+        key="accounts",
+        value=json.dumps(
+            [{"account_id": acc["id"], "account_name": acc["account_name"]} for acc in accounts]
+        ),
+        expires=(datetime.now(tz.utc) + timedelta(days=30)).strftime("%a, %d %b %Y %H:%M:%S GMT"),
+        path="/",
+        domain=".pauservices.top" if DOMAIN else None,
+        httponly=False,
+        samesite="Lax",
+        secure=False,  # Turn this into True when using HTTPS
+    )
+
+    return JSONResponse(
+        content={"account_id": account_id, "message": "Account registered successfully"},
+        status_code=201,
+    )
+
 
 @app.post("/auth/login", description="### Login to an account", tags=["User Authentication"])
 async def login_account(request_body: LoginUser):
-
     return {"message": "Login successful"}
 
-@app.get("/proxy/public-ip", description="### Retrives the public IP address of the static proxy\n\nThis is then used to connect with the Bitget API", tags=["User Authentication"])
+
+@app.get(
+    "/proxy/public-ip",
+    description=(
+        "### Retrieves the public IP address of the static proxy\n\n"
+        "This is then used to connect with the Bitget API"
+    ),
+    tags=["User Authentication"],
+)
 async def get_proxy_ip(user_id: Annotated[tuple[dict, str], Depends(get_current_active_user)]):
-    
+    proxy = await BrightProxy.create()
+
     # Validate User
     user = await crud.get_user_data(user_id=user_id)
-
     if not user:
-        raise HTTPException(status_code=401, detail="You have no permissions to get the public IP")
-    
-    ip = await proxy_manager.select_ip()
-    return {'proxy_ip': ip}
+        raise HTTPException(
+            status_code=401,
+            detail="You don't have permissions to get the public IP",
+        )
+
+    ip = await proxy.select_ip()
+    return {"proxy_ip": ip}
+
 
 @app.post("/auth/refresh-token", description="### Refresh access token", tags=["User Authentication"])
 async def refresh_token():
-
     return {"message": "Token refreshed successfully"}
 
+
+# ------------------------------------------------------------------------------
 # ACCOUNT MANAGEMENT (Public - Accessible from Frontend)
-@app.get("/accounts/{user_id}", description="### Get accounts asociated to user", tags=["Account Management"])
-async def get_account_info(user_id: str):
+# ------------------------------------------------------------------------------
+
+#
+# 1) SPECIFIC ROUTE for total assets
+#
+@app.get(
+    "/accounts/total_assets/{user_id}",
+    description="### Get total assets of all accounts",
+    tags=["Account Management"],
+)
+async def get_total_assets(
+    user_id: str
+    # user_info: Annotated[tuple[dict, str], Depends(get_current_active_user)]
+):
+    proxy = await BrightProxy.create()
+    # user_dict, user_id = user_info
+
+    accounts = await crud.get_accounts(user_id=user_id)
+
+    result = []
+    for account in accounts:
+        account_information = await crud.get_account(account_id=account["id"])
+        credentials = await crud.get_account_credentials(account_id=account["id"])
+
+        assets = await get_account_assets_(
+            account_id=account["id"],
+            exchange=credentials["exchange_name"],
+            proxy=proxy,
+            apikey=credentials["apikey"],
+            secret_key=credentials["secret_key"],
+            passphrase=credentials["passphrase"],
+            proxy_ip=account_information["proxy_ip"],
+        )
+
+        result.append(
+            {
+                "account_id": account["id"],
+                "account_name": account["account_name"],
+                "assets": assets,
+            }
+        )
+
+    return result
+
+
+#
+# 2) SPECIFIC ROUTE for account assets by ID
+#
+@app.get(
+    "/accounts/assets",
+    description="### Get specific account assets",
+    tags=["Account Management"],
+)
+async def get_account_assets_by_id(user_id: Annotated[tuple[str, str], Depends(get_current_active_user)],):
     proxy = await BrightProxy.create()
 
-    return {"user_id": user_id, "message": "Account info retrieved"}
+    account_information = await crud.get_account(account_id=user_id)
+    credentials = await crud.get_account_credentials(account_id=user_id)
 
-@app.get("/accounts/assets", description="### Get account assets", tags=["Account Management"])
-async def get_account_assets(credentials: Annotated[tuple[str, str, str, str, str], Depends(get_current_active_account)], account_id: str):
-    _, proxy_ip, apikey, secret_key, passphrase = credentials
-    proxy = await BrightProxy.create()
-    
-    bitget_account = BitgetLayerConnection(
-        api_key=apikey,
-        api_secret_key=secret_key,
-        passphrase=passphrase,
+    assets = await get_account_assets_(
+        account_id=user_id,
+        exchange=credentials["exchange_name"],
         proxy=proxy,
-        ip=proxy_ip
+        apikey=credentials["apikey"],
+        secret_key=credentials["secret_key"],
+        passphrase=credentials["passphrase"],
+        proxy_ip=account_information["proxy_ip"],
     )
-
-    assets = bitget_account.account_assets()
 
     return assets
 
-@app.get("/accounts/balance/{account_id}/{user_id}", description="### Get total balance of the account", tags=["Account Management"])
-async def get_account_balance(account_id: str, user_id: str):
-    proxy = await BrightProxy.create()
 
+#
+# 3) GENERIC ROUTE for all accounts under {user_id}
+#
+@app.get("/accounts/{user_id}", description="### Get accounts associated to user", tags=["Account Management"])
+async def get_account_info(user_id: str):
+    proxy = await BrightProxy.create()
+    # (sample response for demonstration)
+    return {"user_id": user_id, "message": "Account info retrieved"}
+
+
+@app.put("/accounts/main-account/{account_id}",  description="Set main account", tags=["Account Management"])
+async def set_main_account(
+    account_id: str,
+    user_info: Annotated[tuple[dict, str], Depends(get_current_active_user)],
+):
+    proxy = await BrightProxy.create()
+    # Logic to set main account
     return {}
 
 
-@app.delete("/accounts/remove/{account_id}", description="### Remove API credentials", tags=["Account Management"])
-async def delete_user_credentials(account_id: str):
+@app.get("/accounts/total_balance/{user_id}", description="### Get total balance of user account", tags=["Account Management"])
+async def get_account_balance(user_id: str):
+    proxy = await BrightProxy.create()
+    # Return total balance for user
+    return {}
 
 
-    return {"message": f"API credentials for account {account_id} removed"}
+@app.get("/accounts/balance/{account_id}",description="### Get total balance of an explicit account",tags=["Account Management"])
+async def get_account_balance_by_id(account_id: str):
+    proxy = await BrightProxy.create()
+    # Return balance for this specific account
+    return {}
 
 
-
+# ------------------------------------------------------------------------------
 # TRADING OPERATIONS (Internal - Accessed by APIs in the same VPC)
+# ------------------------------------------------------------------------------
 @app.post("/trades/open", description="### Open multiple trading operations", tags=["Trading Operations"])
 async def open_trades(request_body: TradeRequest):
     proxy = await BrightProxy.create()
-
- 
+    # Logic to open trades
     return {"message": "Trades opened successfully"}
+
 
 @app.post("/trades/close", description="### Close multiple trade operations", tags=["Trading Operations"])
 async def close_trades(request_body: CloseTradeRequest):
     proxy = await BrightProxy.create()
-
+    # Logic to close trades
     return {"message": "Trades closed successfully"}
+
 
 @app.post("/trades/schedule", description="### Schedule multiple trade operations", tags=["Trading Operations"])
 async def schedule_multiple_trades(request_body: ScheduledTradeRequest, background_tasks: BackgroundTasks):
     proxy = await BrightProxy.create()
-
-
+    # Logic to schedule trades
     return {"message": "Trades scheduled successfully"}
 
 
-# FUTURES
-@app.get("/futures/assets", description="Get subaccount assets", tags=["Futures"])
-async def get_futures_assets():
-    proxy = await BrightProxy.create()
-
-    return {}
-
-@app.get("/futures/balance/{account_id}/{user_id}", description="Get total balance in future wa", tags=["Futures"])
-async def get_future_total_balance():
-    proxy = await BrightProxy.create()
-
-    return {}
-
+# ------------------------------------------------------------------------------
 # TRADING CONFIGURATION (Internal - Accessed by APIs in the same VPC)
+# ------------------------------------------------------------------------------
 @app.post("/risk-management/set", description="### Set trading configuration", tags=["Trading Configuration"])
 async def set_risk_management(request_body: SetRiskManagementRequest):
-    
-    # Store risk configuration in database
+    # Store risk configuration in the database
     return {"message": "Risk management configuration saved"}
+
 
 @app.get("/risk-management/{user_id}", description="### Get current risk management from Bitget account", tags=["Trading Configuration"])
 async def get_risk_management(user_id: str):
     # Fetch risk configuration from database
     return {"user_id": user_id, "message": "Risk management settings retrieved"}
 
+
+# ------------------------------------------------------------------------------
+# SPOT
+# ------------------------------------------------------------------------------
+@app.get("/spot/assets", description="Get subaccount assets", tags=["Spot"])
+async def get_spot_assets():
+    proxy = await BrightProxy.create()
+    # Logic to retrieve spot assets
+    return {}
+
+
+# ------------------------------------------------------------------------------
+# MAIN (Run the API)
+# ------------------------------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host='0.0.0.0', port=8001)
+
+    uvicorn.run(app, host="0.0.0.0", port=8001)

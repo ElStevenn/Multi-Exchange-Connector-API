@@ -8,7 +8,6 @@ from fastapi import HTTPException
 
 from src.app.proxy import BrightProxy
 
-
 class BitgetLayerConnection():
     def __init__(self, api_key, api_secret_key, passphrase, proxy: BrightProxy, ip: str) -> None:
         self.api_key = api_key
@@ -28,19 +27,19 @@ class BitgetLayerConnection():
 
     def get_headers(self, method: str, request_path: str, query_params: dict, body_params: dict) -> dict:
         timestamp = str(int(time.time() * 1000))
-        method = method.upper()  
+        method = method.upper()
+        
+        # Build the pre-hash string: timestamp + method + requestPath (+ possible query) + body
         prehash_string = f"{timestamp}{method}{request_path}"
 
-        # Sort and construct query string
         if query_params:
             sorted_params = sorted(query_params.items(), key=lambda x: x[0])
-            query_string = '&'.join(f"{key}={value}" for key, value in sorted_params)
+            query_string = '&'.join(f"{k}={v}" for k, v in sorted_params)
             prehash_string += f"?{query_string}"
             request_path += f"?{query_string}"
         else:
             query_string = ''
 
-        # Serialize body if it's a dictionary
         if body_params:
             body = json.dumps(body_params)
         else:
@@ -58,62 +57,63 @@ class BitgetLayerConnection():
         }
 
     async def get_account_information(self) -> dict:
-        """Get account information(SPOT read or SPOT read/write permission needed)"""
+        """Works because the endpoint is correct."""
         request = "/api/v2/spot/account/info"
-        url = f"{self.api_url}/api/v2/spot/account/info"
+        url = f"{self.api_url}{request}"
         headers = self.get_headers("GET", request, {}, {})
-        account_information = await self.proxy.curl_api(
+        response_data = await self.proxy.curl_api(
             url=url,
             body={}, 
             method="GET",
             headers=headers,
             ip=self.ip
         )
-        if account_information.get('msg') == 'success':
-            return account_information.get('data', None)
+        
+        if response_data.get('msg') == 'success':
+            return response_data.get('data', None)
         else:
-            raise HTTPException(status_code=400, detail=f"An error ocurred: {account_information}")
+            print(response_data)
+            await self.proxy.remove_ip_blacklist(ip=self.ip)
+            raise HTTPException(status_code=400, detail="An error ocurred, please try again later")
 
-    async def account_assets(self):
-        """Get account assets(SPOT read or SPOT read/write permission needed)."""
-        request = "/api/v2/spot/account/assets"
+    async def account_list_info(self):
+        """Query all account information under a certain product type"""
+        request = "/api/v2/mix/account/accounts"
         url = f"{self.api_url}{request}"
-        parameters = {
-            "coin": "USDT"  
-        }
-        headers = self.get_headers("GET", request, parameters, {})  
-        account_assets = await self.proxy.curl_api(
-            url=f"{url}?coin={parameters['coin']}",  
-            body={}, 
+        params = {"productType": "USDT-FUTURES"}
+        headers = self.get_headers("GET", request, params, {})
+        response_data = await self.proxy.curl_api(
+            url=url,
+            body=params,
             method="GET",
             headers=headers,
             ip=self.ip
         )
         
-        return account_assets.get('data', None)
+        if response_data.get('msg') == 'success':
+            account_list = response_data.get('data', None)[0]
 
+            return account_list
 
+        else:
+            print(response_data)
+            # Remove machine IP from blacklist, because this was an error it had in the past
+            avariable_ip = await self.proxy.get_machine_ip()
+            await self.proxy.remove_ip_blacklist(ip=avariable_ip)
+            # raise HTTPException(status_code=400, detail="An error ocurred, please try again later")
+    
 async def main_test_bitget():
     proxy = await BrightProxy.create()
-    ip = "185.246.219.114"
+    ip = "58.97.135.175"
 
-    # Account Information
-    bitget_connection = BitgetLayerConnection(
-        api_key="bg_1cf35b8ca56123b1fc4fb00909cffa45",
-        api_secret_key="26df4b9bb4e719028c3f4e02d19330121e10d3cb611a66300160be962b8120d0",
-        passphrase="Skyfall97Zoom42",
-        proxy=proxy,
-        ip=ip
-    )
+
     
-    # Account Information
-    acc_info = await bitget_connection.get_account_information()
-    print("Account ID: ", acc_info.get('userId'))
+    # acc_info = await bitget_connection.get_account_information()
+    # print(acc_info)
 
-    # Account assets
-    # acc_assets = await bitget_connection.account_assets()
-    # print(f"Account assets: {acc_assets}")
-
+    # # Test the "assets" endpoint
+    # acc_assets = await bitget_connection.account_list_info()
+    # print("Account assets:", acc_assets)
 
 if __name__ == "__main__":
     asyncio.run(main_test_bitget())

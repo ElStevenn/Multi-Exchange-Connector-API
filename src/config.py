@@ -2,15 +2,20 @@ import os
 from dotenv import load_dotenv
 from cryptography.hazmat.primitives import serialization
 from typing import Literal
-import base64
+import base64, socket
 
 load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+HOSTNAME = socket.gethostname()
 
 # BRIGHT DATA API
 BRIGHTDATA_API_TOKEN = os.getenv('BRIGHTDATA_API_TOKEN', 'brightdata-api-token')
 
+if HOSTNAME == 'mamadocomputer':
+    DOMAIN = None
+else:
+    DOMAIN = os.getenv('TEST_DOMAIN', None)
 
 # DATABASE
 DB_HOST = os.getenv('DB_HOST', '0.0.0.0')
@@ -39,4 +44,4 @@ PUBLIC_KEY = load_public_key('security/public_key.pem')
 PRIVATE_KEY = load_private_key('security/private_key.pem')
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-jwt-secret-key')
 
-AVARIABLE_EXCHANGES = ['bitget', 'binance']
+AVARIABLE_EXCHANGES = ['bitget', 'binance', 'okx']
