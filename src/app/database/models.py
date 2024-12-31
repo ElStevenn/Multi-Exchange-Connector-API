@@ -102,6 +102,9 @@ class Account(Base):
         uselist=False,
         cascade="all, delete-orphan"
     )
+    spot_history = relationship("SpotHistory", back_populates="account", cascade="all, delete-orphan")
+    futures_history = relationship("FuturesHistory", back_populates="account", cascade="all, delete-orphan")
+    balance_history = relationship("BalanceAccountHistory", back_populates="account", cascade="all, delete-orphan")
 
     # Many-to-one relationship with Users
     user = relationship("Users", back_populates="accounts")
@@ -195,7 +198,44 @@ class UserCredentials(Base):
         )
         return decrypted_oauth2_token.decode('utf-8')
 
+class SpotHistory(Base):
+    __tablename__ = "spot_history"
 
+    id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    account_id = Column(String(255), ForeignKey('accounts.account_id'), nullable=False)
+    timestamp = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+    asset = Column(String(255), nullable=False)
+    balance = Column(Float, nullable=False)
+    usd_value = Column(Float, nullable=False)
+
+    # Many-to-one relationship with Account
+    account = relationship("Account", back_populates="spot_history")
+
+class FuturesHistory(Base):
+    __tablename__ = "futures_history"
+
+    id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    account_id = Column(String(255), ForeignKey('accounts.account_id'), nullable=False)
+    timestamp = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+    asset = Column(String(255), nullable=False)
+    balance = Column(Float, nullable=False)
+    usd_value = Column(Float, nullable=False)
+
+    # Many-to-one relationship with Account
+    account = relationship("Account", back_populates="futures_history")
+
+class BalanceAccountHistory(Base):
+    __tablename__ = "balance_account_history"
+
+    id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    account_id = Column(String(255), ForeignKey('accounts.account_id'), nullable=False)
+    timestamp = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+    asset = Column(String(255), nullable=False)
+    balance = Column(Float, nullable=False)
+    usd_value = Column(Float, nullable=False)
+
+    # Many-to-one relationship with Account
+    account = relationship("Account", back_populates="balance_history")
 
 class RiskManagement(Base):
     __tablename__ = "risk_management"
@@ -212,31 +252,6 @@ class RiskManagement(Base):
 
     # One-to-one relationship with Account
     account = relationship("Account", back_populates="risk_management")
-
-
-# CRYPTO MODELS
-class FutureCryptos(Base):
-    __tablename__ = "future_cryptos"
-
-    id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    symbol = Column(String(255), nullable=False)
-    funding_rate_coundown_every = Column(Integer, default=8)  # 8 or 4
-
-    # One-to-many relationship with CryptoHistoricalPNL
-    crypto_historical_pnl = relationship("CryptoHistoricalPNL", back_populates="crypto", cascade="all, delete-orphan")
-
-
-class CryptoHistoricalPNL(Base):
-    __tablename__ = "crypto_historical_pnl"
-
-    id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    crypto_id = Column(pgUUID(as_uuid=True), ForeignKey('future_cryptos.id'), nullable=False)
-    avg_entry_price = Column(Numeric, nullable=False)
-    avg_close_price = Column(Numeric, nullable=False)
-    percentage_earning = Column(String(255))
-
-    # Many-to-one relationship with FutureCryptos
-    crypto = relationship("FutureCryptos", back_populates="crypto_historical_pnl")
 
 
 class StarredCryptos(Base):

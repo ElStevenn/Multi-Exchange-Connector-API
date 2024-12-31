@@ -184,6 +184,30 @@ async def get_user_data(session: AsyncSession, user_id: str):
     
     return {"username": user.username, "name": user.name, "surname": user.surname, "email": user.email, "role": user.role}
 
+@db_connection
+async def get_all_users(session: AsyncSession):
+    """Get all users"""
+    result = await session.execute(
+        select(Users)
+    )
+
+    result = result.scalars().all()
+
+    users = [{"id": user.id, "username": user.username} for user in result]  
+    return users
+    
+@db_connection
+async def get_user_accounts(session: AsyncSession, user_id: str):
+    """Get user accounts"""
+    result = await session.execute(
+        select(Account)
+        .where(Account.user_id == user_id)
+    )
+
+    result = result.scalars().all()
+
+    accounts = [{"id": account.account_id, "proxy_ip": account.proxy_ip, "account_name": account.account_name} for account in result]  
+    return accounts
 
 # - - - CREDENTIALS - - - 
 @db_connection
@@ -210,9 +234,49 @@ async def add_user_credentials(session: AsyncSession, account_id: str, exchange:
     return credentials.id
 
 
-# - - - USER ACCOUNT - - - 
+# - - - HISTORICAL METADATA - - - 
 
+@db_connection
+async def add_futures_historical_metadata(session: AsyncSession, account_id: str, asset: str, balance: float, usd_value: float):
+    """Add futures historical metadata"""
+    futures_historical_metadata = FuturesHistory(
+        account_id=account_id,
+        asset=asset,
+        balance=balance,
+        usd_value=usd_value
+    )
 
+    session.add(futures_historical_metadata)
+    await session.flush()
+    return futures_historical_metadata.id
+
+@db_connection
+async def add_spot_historical_metadata(session: AsyncSession, account_id: str, asset: str, balance: float, usd_value: float):
+    """Add spot historical metadata"""
+    spot_historical_metadata = SpotHistory(
+        account_id=account_id,
+        asset=asset,
+        balance=balance,
+        usd_value=usd_value
+    )
+
+    session.add(spot_historical_metadata)
+    await session.flush()    
+    return spot_historical_metadata.id
+
+@db_connection
+async def add_balance_historical_metadata(session: AsyncSession, account_id: str, asset: str, balance: float, usd_value: float):
+    """Add balance historical metadata"""
+    balance_historical_metadata = BalanceAccountHistory(
+        account_id=account_id,
+        asset=asset,
+        balance=balance,
+        usd_value=usd_value
+    )
+
+    session.add(balance_historical_metadata)
+    await session.flush()    
+    return balance_historical_metadata.id
 
 async def database_crud_testing():
     user_id = "2141ec7d-8156-4462-9a8e-0cf37b11997d"

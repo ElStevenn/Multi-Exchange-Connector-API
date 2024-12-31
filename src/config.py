@@ -7,6 +7,9 @@ import base64, socket
 load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+ENVIROMENT = 'test' if BASE_DIR.startswith('/home/ububtu') else 'dev'
+
 HOSTNAME = socket.gethostname()
 
 # BRIGHT DATA API
@@ -18,10 +21,18 @@ else:
     DOMAIN = os.getenv('TEST_DOMAIN', None)
 
 # DATABASE
-DB_HOST = os.getenv('DB_HOST', '0.0.0.0')
+
+if BASE_DIR.startswith('/home/ububtu'):
+    DB_HOST = os.getenv('TEST_DB_HOST', 'localhost')
+else:
+    DB_HOST = os.getenv('LOCAL_DB_HOST', '0.0.0.0')
+
 DB_NAME = os.getenv('DB_NAME', 'db-name')
 DB_USER = os.getenv('DB_USER', 'db-user')
 DB_PASS = os.getenv('DB_PASS', 'db-pass')
+
+# REDIS
+REDIS_URL = f'redis://{os.getenv('LOCAL_REDIS_HOST')}:6379/0' if ENVIROMENT == 'dev' else '' 
 
 
 # SECURITY

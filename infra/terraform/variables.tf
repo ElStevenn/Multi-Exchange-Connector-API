@@ -9,3 +9,15 @@ variable "vpc_id" {
   type        = string
   sensitive   = false
 }
+
+variable "ami_id" {
+  description = "ID for the AMI instance (image)"
+  type = string
+  sensitive = false
+}
+
+variable "commit_message" {
+    description = "value"
+    type = string
+    sensitive = false
+}

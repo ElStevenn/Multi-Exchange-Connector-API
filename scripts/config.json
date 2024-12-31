@@ -1,0 +1,8 @@
+{
+    "redis": false,
+    "celery": false,
+    "api": false,
+    "network": false,
+    "volume": false,
+    "first_time": true
+}

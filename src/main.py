@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.app.database import crud
+from src.app.database.database import get_all_tables
 from src.app.security import encrypt_data, get_current_active_user, get_current_active_account
 from src.app.schemas import (
     RegisterUser,
@@ -119,14 +120,7 @@ async def login_account(request_body: LoginUser):
     return {"message": "Login successful"}
 
 
-@app.get(
-    "/proxy/public-ip",
-    description=(
-        "### Retrieves the public IP address of the static proxy\n\n"
-        "This is then used to connect with the Bitget API"
-    ),
-    tags=["User Authentication"],
-)
+@app.get("/proxy/public-ip",description=("### Retrieves the public IP address of the static proxy\n\n""This is then used to connect with the Bitget API"), tags=["User Authentication"])
 async def get_proxy_ip(user_id: Annotated[tuple[dict, str], Depends(get_current_active_user)]):
     proxy = await BrightProxy.create()
 
@@ -152,74 +146,78 @@ async def refresh_token():
 # ------------------------------------------------------------------------------
 
 #
-# 1) SPECIFIC ROUTE for total assets
+# ASSETS
 #
-@app.get(
-    "/accounts/total_assets/{user_id}",
-    description="### Get total assets of all accounts",
-    tags=["Account Management"],
-)
-async def get_total_assets(
-    user_id: str
-    # user_info: Annotated[tuple[dict, str], Depends(get_current_active_user)]
-):
+@app.get("/assets/overview", description="### Get total assets of all accounts", tags=["Assets"])
+async def get_total_assets(user_id: str):
     proxy = await BrightProxy.create()
-    # user_dict, user_id = user_info
 
+    # Fetch user accounts
     accounts = await crud.get_accounts(user_id=user_id)
 
-    result = []
-    for account in accounts:
-        account_information = await crud.get_account(account_id=account["id"])
-        credentials = await crud.get_account_credentials(account_id=account["id"])
+    if not accounts:
+        raise HTTPException(status_code=404, detail="No accounts found for this user.")
 
-        assets = await get_account_assets_(
-            account_id=account["id"],
-            exchange=credentials["exchange_name"],
-            proxy=proxy,
-            apikey=credentials["apikey"],
-            secret_key=credentials["secret_key"],
-            passphrase=credentials["passphrase"],
-            proxy_ip=account_information["proxy_ip"],
-        )
+    async def process_account(account):
+        """Fetch assets for a single account."""
+        try:
+            account_information = await crud.get_account(account_id=account["id"])
+            credentials = await crud.get_account_credentials(account_id=account["id"])
 
-        result.append(
-            {
-                "account_id": account["id"],
-                "account_name": account["account_name"],
+            assets = await get_account_assets_(
+                account_id=account["id"],
+                exchange=credentials["exchange_name"],
+                proxy=proxy,
+                apikey=credentials.get("apikey"),
+                secret_key=credentials.get("secret_key"),
+                passphrase=credentials.get("passphrase"),
+                proxy_ip=account_information.get("proxy_ip"),
+            )
+
+            return {
+                "exchange": credentials["exchange_name"],
+                "account_total_balance": assets["total_balance"],
                 "assets": assets,
             }
-        )
+        except Exception as e:
+            return {
+                "account_id": account["id"],
+                "error": str(e)
+            }
 
-    return result
-
-
-#
-# 2) SPECIFIC ROUTE for account assets by ID
-#
-@app.get(
-    "/accounts/assets",
-    description="### Get specific account assets",
-    tags=["Account Management"],
-)
-async def get_account_assets_by_id(user_id: Annotated[tuple[str, str], Depends(get_current_active_user)],):
-    proxy = await BrightProxy.create()
-
-    account_information = await crud.get_account(account_id=user_id)
-    credentials = await crud.get_account_credentials(account_id=user_id)
-
-    assets = await get_account_assets_(
-        account_id=user_id,
-        exchange=credentials["exchange_name"],
-        proxy=proxy,
-        apikey=credentials["apikey"],
-        secret_key=credentials["secret_key"],
-        passphrase=credentials["passphrase"],
-        proxy_ip=account_information["proxy_ip"],
+    # Process all accounts concurrently
+    assets_overview = await asyncio.gather(
+        *(process_account(account) for account in accounts),
+        return_exceptions=False
     )
 
-    return assets
+    # Aggregate total balance across all exchanges
+    total_assets = sum(
+        account.get("total_balance", 0) 
+        for account in assets_overview 
+        if "total_balance" in account
+    )
 
+    return {
+        "total_balance": total_assets,
+        "accounts": assets_overview
+    }
+
+
+@app.get("/assets/list", description="### Retrive a list of assets per exchange", tags=["Assets"])
+async def get_assets_overview(user_id: Annotated[tuple[str, str], Depends(get_current_active_user)]):
+    proxy = await BrightProxy.create()
+
+
+
+    return {}
+
+@app.get("/assets/history/{user_id}/{account}", description="### Get historical asset data for the chart", tags=["Assets"])
+async def get_assets_history(account: str, user_id: Annotated[tuple[str, str], Depends(get_current_active_user)]):
+    proxy = await BrightProxy.create()
+
+
+    return {}
 
 #
 # 3) GENERIC ROUTE for all accounts under {user_id}
@@ -238,13 +236,6 @@ async def set_main_account(
 ):
     proxy = await BrightProxy.create()
     # Logic to set main account
-    return {}
-
-
-@app.get("/accounts/total_balance/{user_id}", description="### Get total balance of user account", tags=["Account Management"])
-async def get_account_balance(user_id: str):
-    proxy = await BrightProxy.create()
-    # Return total balance for user
     return {}
 
 
@@ -304,9 +295,14 @@ async def get_spot_assets():
     return {}
 
 
-# ------------------------------------------------------------------------------
-# MAIN (Run the API)
-# ------------------------------------------------------------------------------
+
+@app.get("/test")
+async def test():
+
+    tables = await get_all_tables()
+
+    return tables
+
 if __name__ == "__main__":
     import uvicorn
 

@@ -4,9 +4,12 @@ import hmac
 import time
 import json
 import httpx
+from typing import Dict
+
 from fastapi import HTTPException
 
 from src.app.proxy import BrightProxy
+
 
 class BitgetLayerConnection():
     def __init__(self, api_key, api_secret_key, passphrase, proxy: BrightProxy, ip: str) -> None:
@@ -76,7 +79,7 @@ class BitgetLayerConnection():
             await self.proxy.remove_ip_blacklist(ip=self.ip)
             raise HTTPException(status_code=400, detail="An error ocurred, please try again later")
 
-    async def account_list_info(self):
+    async def furues_assets(self) -> dict:
         """Query all account information under a certain product type"""
         request = "/api/v2/mix/account/accounts"
         url = f"{self.api_url}{request}"
@@ -96,24 +99,154 @@ class BitgetLayerConnection():
             return account_list
 
         else:
-            print(response_data)
+        
             # Remove machine IP from blacklist, because this was an error it had in the past
             avariable_ip = await self.proxy.get_machine_ip()
             await self.proxy.remove_ip_blacklist(ip=avariable_ip)
-            # raise HTTPException(status_code=400, detail="An error ocurred, please try again later")
+            raise HTTPException(status_code=400, detail="An error ocurred, please try again later")
     
+    async def spot_assets(self) -> dict:
+        """Get account assets and whether are frozen or locked"""
+        request = "/api/v2/spot/account/assets"
+        url = f"{self.api_url}{request}"
+        params = {"coin": "USDT"} 
+        headers = self.get_headers("GET", request, params, {})
+        response_data = await self.proxy.curl_api(
+            url=url,
+            body=params,
+            method="GET",
+            headers=headers,
+            ip=self.ip
+        )
+        
+        if response_data.get('msg') == 'success':
+            account_list = response_data.get('data', None)[0]
+
+            return {
+                "available": float(account_list.get('available', None)),
+                "limitAvailable": float(account_list.get('limitAvailable', None)),
+                "frozen": float(account_list.get('frozen', None)),
+                "locked": float(account_list.get('locked', None)),
+            }
+
+        else:
+            # Remove machine IP from blacklist, because this was an error it had in the past
+            avariable_ip = await self.proxy.get_machine_ip()
+            await self.proxy.remove_ip_blacklist(ip=avariable_ip)
+            raise HTTPException(status_code=400, detail="An error ocurred, please try again later")
+
+    async def margin_assets_summary(self) -> Dict:
+        """Get margin assets, both crossed and isolated, summary"""
+        # Crossed Margin Request
+        crossed_request = "/api/v2/margin/crossed/account/assets"
+        crossed_url = f"{self.api_url}{crossed_request}"
+        crossed_params = {"coin": "USDT"}
+        crossed_headers = self.get_headers("GET", crossed_request, crossed_params, {})
+        response_data1 = await self.proxy.curl_api(
+            url=crossed_url,
+            body=crossed_params,
+            method="GET",
+            headers=crossed_headers,
+            ip=self.ip
+        )
+        
+        # Isolated Margin Request
+        isolated_request = "/api/v2/margin/isolated/account/assets"
+        isolated_url = f"{self.api_url}{isolated_request}"
+        isolated_params = {"coin": "BTCUSDT"}
+        isolated_headers = self.get_headers("GET", isolated_request, isolated_params, {})
+        response_data2 = await self.proxy.curl_api(
+            url=isolated_url,
+            body=isolated_params,
+            method="GET",
+            headers=isolated_headers,
+            ip=self.ip
+        )
+        
+        crossed = {}
+        isolated = {}
+        total = {
+            "totalAmount": 0.0,
+            "available": 0.0,
+            "frozen": 0.0,
+            "borrow": 0.0,
+            "interest": 0.0,
+            "net": 0.0
+        }
+        
+        if response_data1.get('msg') == 'success' and response_data2.get('msg') == 'success':
+            # Process Crossed Assets
+            crossed_assets = response_data1.get('data', [])
+            if crossed_assets:
+                crossed_asset = crossed_assets[0]
+                crossed = {
+                    "coin": crossed_asset.get("coin"),
+                    "totalAmount": float(crossed_asset.get("totalAmount", 0)),
+                    "available": float(crossed_asset.get("available", 0)),
+                    "frozen": float(crossed_asset.get("frozen", 0)),
+                    "borrow": float(crossed_asset.get("borrow", 0)),
+                    "interest": float(crossed_asset.get("interest", 0)),
+                    "net": float(crossed_asset.get("net", 0))
+                }
+                # Update Total
+                total["totalAmount"] += crossed["totalAmount"]
+                total["available"] += crossed["available"]
+                total["frozen"] += crossed["frozen"]
+                total["borrow"] += crossed["borrow"]
+                total["interest"] += crossed["interest"]
+                total["net"] += crossed["net"]
+            
+            # Process Isolated Assets
+            isolated_assets = response_data2.get('data', [])
+            if isolated_assets:
+                isolated_asset = isolated_assets[0]
+                isolated = {
+                    "coin": isolated_asset.get("coin"),
+                    "totalAmount": float(isolated_asset.get("totalAmount", 0)),
+                    "available": float(isolated_asset.get("available", 0)),
+                    "frozen": float(isolated_asset.get("frozen", 0)),
+                    "borrow": float(isolated_asset.get("borrow", 0)),
+                    "interest": float(isolated_asset.get("interest", 0)),
+                    "net": float(isolated_asset.get("net", 0))
+                }
+                # Update Total
+                total["totalAmount"] += isolated["totalAmount"]
+                total["available"] += isolated["available"]
+                total["frozen"] += isolated["frozen"]
+                total["borrow"] += isolated["borrow"]
+                total["interest"] += isolated["interest"]
+                total["net"] += isolated["net"]
+            
+            return {
+                "crossed": crossed,
+                "isolated": isolated,
+                "total": total
+            }
+        else:
+            # Handle API error and remove from blacklist
+            available_ip = await self.proxy.get_machine_ip()
+            await self.proxy.remove_ip_blacklist(ip=available_ip)            
+            raise HTTPException(status_code=400, detail="An error occurred, please try again later")
+
 async def main_test_bitget():
     proxy = await BrightProxy.create()
     ip = "58.97.135.175"
 
 
-    
+    bitget_connection = BitgetLayerConnection(
+        api_key="bg_7a55b38c349edfa10c66423cdf0817b0",
+        api_secret_key="c30f1a5b694ebeaa5872f8e48fdcd3273ee961de025d967bc4a1b7b4104119e6",
+        passphrase="EstoyHastaLaPutaPolla",
+        proxy=proxy,
+        ip=ip
+    )
+
     # acc_info = await bitget_connection.get_account_information()
     # print(acc_info)
 
     # # Test the "assets" endpoint
-    # acc_assets = await bitget_connection.account_list_info()
-    # print("Account assets:", acc_assets)
+    acc_assets = await bitget_connection.spot_assets()
+    print("Account assets:", acc_assets)
 
 if __name__ == "__main__":
     asyncio.run(main_test_bitget())
