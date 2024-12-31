@@ -9,7 +9,7 @@ resource "aws_key_pair" "instance_pub_key" {
 }
 
 resource "aws_iam_role" "ssm_role" {
-  name = "ssm_full_acces_role"
+  name = "ssm_full_acces_role_lol"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
