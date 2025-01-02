@@ -12,13 +12,6 @@ docker container rm $container_name
 # Remove image
 docker image rm $image_name
 
-# Test
-echo "Test? (y/n)"
-read test
-if [ "$test" == "y" ]; then
-    echo "Nothing to test"
-fi
-
 echo "Build and Deploy (y/n)?"
 read res1
 

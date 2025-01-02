@@ -9,13 +9,12 @@ volume_name="multiexchange_volume"
 redis_image="multiexchange_redis"
 redis="multiexchange_redis_v1"
 
-REDIS
 
 # Update packages and install dependencies
 sudo apt-get update -y
 
 # Install required packages
-sudo apt-get install -y nginx certbot python3-certbot-nginx jq git docker.io
+sudo apt-get install -y nginx certbot python3-certbot-nginx jq
 
 
 # Configure 
@@ -32,19 +31,19 @@ if [ -f "$config" ]; then
             echo "Setting up network"
 
             docker network create $network_name --driver bridge --subnet 10.0.0.0/24
-            jq '.network = true' $config > temp && mv temp $config
+            sudo jq '.network = true' "$config" | sudo tee "$config.tmp" > /dev/null && sudo mv "$config.tmp" "$config"
         fi
 
         if [[ "$VOLUME" == "false" ]]; then
             echo "Setting up volume"
             docker volume create $volume_name
 
-            jq '.volume = true' $config > temp && mv temp $config
+            sudo jq '.network = true' "$config" | sudo tee "$config.tmp" > /dev/null && sudo mv "$config.tmp" "$config"
         fi
 
         if [[ "$first_time" == "true" ]]; then
             echo "Running first time setup"
-            git clone https://github.com/ElStevenn/Multi-Exchange-Connector-API.git
+            sudo git clone https://github.com/ElStevenn/Multi-Exchange-Connector-API.git /home/ubuntu/Multi-Exchange-Connector-API
             mkdir -p /home/ubuntu/Multi-Exchange-Connector-API/src/security
             openssl genpkey -algorithm RSA -out /home/ubuntu/Multi-Exchange-Connector-API/src/security/private_key.pem -pkeyopt rsa_keygen_bits:4096
             openssl rsa -pubout -in /home/ubuntu/Multi-Exchange-Connector-API/src/security/private_key.pem -out /home/ubuntu/Multi-Exchange-Connector-API/src/security/public_key.pem

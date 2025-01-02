@@ -21,13 +21,13 @@ FIRST_TIME=$(jq -r '.first_time' "$CONFIG")
 sudo mkdir -p "$NGINX_CONF_DIR" "$NGINX_ENABLED_DIR"
 
 # Stop and remove container
-docker container stop $CONTAINER_NAME
-docker container rm $CONTAINER_NAME
-docker image rm $IMAGE_NAME
+docker container stop $CONTAINER_NAME >/dev/null 2>&1 || true
+docker container rm $CONTAINER_NAME >/dev/null 2>&1 || true
+docker image rm $IMAGE_NAME >/dev/null 2>&1 || true
 
 # Update configuration file if it exists
 if [ -f "$CONFIG" ]; then
-    jq '.api = false' "$CONFIG" | sudo tee "$CONFIG" > /dev/null
+    jq '.api = false' "$CONFIG" | sudo tee "$CONFIG.tmp" > /dev/null && sudo mv "$CONFIG.tmp" "$CONFIG"
 fi
 
 # Allow Nginx through the firewall
@@ -35,7 +35,7 @@ sudo ufw allow 'Nginx Full' || true
 
 cd $APP_DIR
 docker build -t "$IMAGE_NAME" .
-docker run -d --name "$CONTAINER_NAME" --network "$NETWORK_NAME" -p 127.0.0.1:8000:8001  
+docker run -d --name "$CONTAINER_NAME" --network "$NETWORK_NAME" -p 127.0.0.1:8000:8001 "$IMAGE_NAME"
 
 # Create Nginx server block for HTTP (temporary for Certbot)
 sudo bash -c "cat > $NGINX_CONF" <<EOL
