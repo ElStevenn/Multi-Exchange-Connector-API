@@ -6,7 +6,6 @@ env_file="/home/ubuntu/"
 # Variables
 network_name="multiexchange_network"
 volume_name="multiexchange_volume"
-redis_image="multiexchange_redis"
 redis="multiexchange_redis_v1"
 
 
@@ -42,6 +41,20 @@ if [ -f "$config" ]; then
             sudo jq '.volume = true' "$config" | sudo tee "$config.tmp" > /dev/null && sudo mv "$config.tmp" "$config"
         fi
 
+        if [[ "$REDIS" == "false" ]]; then
+            echo "Setting up redis"
+            docker pull redis:latest
+            docker run -d \ 
+                --name "$redis" \
+                --network "$network_name" \
+                --volume "$volume_name":/redis_data \ 
+                -p 6379:6379 \
+                --restart unless-stopped \
+                redis --appendonly yes --dir /redis_data
+
+            sudo jq '.redis = true' "$config" | sudo tee "$config.tmp" > /dev/null && sudo mv "$config.tmp" "$config"
+        fi
+
         if [[ "$FIRST_TIME" == "true" ]]; then
             echo "Running first time setup"
             sudo git clone https://github.com/ElStevenn/Multi-Exchange-Connector-API.git /home/ubuntu/Multi-Exchange-Connector-API
@@ -53,7 +66,6 @@ if [ -f "$config" ]; then
 
         else
             echo "not first time"
-            git -C /home/ubuntu/Multi-Exchange-Connector-API pull origin main
             git config --global --add safe.directory /home/ubuntu/Multi-Exchange-Connector-API
             sleep 2
         fi
