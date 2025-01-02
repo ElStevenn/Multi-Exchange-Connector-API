@@ -60,9 +60,6 @@ server {
 }
 EOL
 
-# Create directory for Certbot challenges
-sudo mkdir -p /var/www/certbot
-
 # Enable the Nginx configuration
 sudo ln -sf "$NGINX_CONF" "$NGINX_ENABLED_DIR/multiexchange"
 sudo rm -f /etc/nginx/sites-enabled/default || true
