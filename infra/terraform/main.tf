@@ -132,7 +132,7 @@ resource "aws_instance" "multiexchange_api" {
 
    provisioner "file" {
     source      = "/home/mrpau/Desktop/Secret_Project/other_layers/Multi-Exchange-Connector-API/src/.env"
-    destination = "/home/ubuntu/Fundy-Main-API/src/.env"
+    destination = "/home/ubuntu/Multi-Exchange-Connector-API/src/.env"
     connection {
       type        = "ssh"
       user        = "ubuntu"
