@@ -57,7 +57,7 @@ if [ -f "$config" ]; then
 
         if [[ "$FIRST_TIME" == "true" ]]; then
             echo "Running first time setup"
-            sudo git clone https://github.com/ElStevenn/Multi-Exchange-Connector-API.git /home/ubuntu/Multi-Exchange-Connector-API
+            git clone https://github.com/ElStevenn/Multi-Exchange-Connector-API.git /home/ubuntu/Multi-Exchange-Connector-API
             mkdir -p /home/ubuntu/Multi-Exchange-Connector-API/src/security
             openssl genpkey -algorithm RSA -out /home/ubuntu/Multi-Exchange-Connector-API/src/security/private_key.pem -pkeyopt rsa_keygen_bits:4096
             openssl rsa -pubout -in /home/ubuntu/Multi-Exchange-Connector-API/src/security/private_key.pem -out /home/ubuntu/Multi-Exchange-Connector-API/src/security/public_key.pem

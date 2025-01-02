@@ -120,8 +120,7 @@ resource "aws_instance" "multiexchange_api" {
   provisioner "remote-exec" {
     inline = [
       "chmod +x /home/ubuntu/scripts/CI/*",
-      "bash /home/ubuntu/scripts/CI/source.sh",
-      "chown -R ubuntu:ubuntu /home/ubuntu/Multi-Exchange-Connector-API"
+      "bash /home/ubuntu/scripts/CI/source.sh"
     ]
     connection {
       type        = "ssh"
