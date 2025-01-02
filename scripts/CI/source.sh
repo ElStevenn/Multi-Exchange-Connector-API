@@ -26,6 +26,7 @@ if [ -f "$config" ]; then
         VOLUME=$(jq -r '.volume' $config)
         REDIS=$(jq -r '.redis' $config)
         FIRST_TIME=$(jq -r '.first_time' $config)
+        echo "FIRST TIME: $FIRST_TIME"
 
         if [[ "$NETWORK" == "false" ]]; then
             echo "Setting up network"
@@ -38,10 +39,10 @@ if [ -f "$config" ]; then
             echo "Setting up volume"
             docker volume create $volume_name
 
-            sudo jq '.network = true' "$config" | sudo tee "$config.tmp" > /dev/null && sudo mv "$config.tmp" "$config"
+            sudo jq '.volume = true' "$config" | sudo tee "$config.tmp" > /dev/null && sudo mv "$config.tmp" "$config"
         fi
 
-        if [[ "$first_time" == "true" ]]; then
+        if [[ "$FIRST_TIME" == "true" ]]; then
             echo "Running first time setup"
             sudo git clone https://github.com/ElStevenn/Multi-Exchange-Connector-API.git /home/ubuntu/Multi-Exchange-Connector-API
             mkdir -p /home/ubuntu/Multi-Exchange-Connector-API/src/security
@@ -51,6 +52,8 @@ if [ -f "$config" ]; then
             git config --global --add safe.directory /home/ubuntu/Multi-Exchange-Connector-API
 
         else
+            echo "not first time"
+            git -C /home/ubuntu/Multi-Exchange-Connector-API pull origin main
             git config --global --add safe.directory /home/ubuntu/Multi-Exchange-Connector-API
             sleep 2
         fi
