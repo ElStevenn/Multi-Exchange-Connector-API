@@ -295,14 +295,6 @@ async def get_spot_assets():
     return {}
 
 
-
-@app.get("/test")
-async def test():
-
-    tables = await get_all_tables()
-
-    return tables
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)

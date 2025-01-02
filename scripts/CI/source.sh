@@ -44,10 +44,10 @@ if [ -f "$config" ]; then
         if [[ "$REDIS" == "false" ]]; then
             echo "Setting up redis"
             docker pull redis:latest
-            docker run -d \ 
+            docker run -d \
                 --name "$redis" \
                 --network "$network_name" \
-                --volume "$volume_name":/redis_data \ 
+                --volume "$volume_name":/redis_data \
                 -p 6379:6379 \
                 --restart unless-stopped \
                 redis --appendonly yes --dir /redis_data

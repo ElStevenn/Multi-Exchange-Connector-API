@@ -3,7 +3,7 @@
 set -e
 
 # Variables
-DOMAIN="arvitrage.pauservices.top" 
+DOMAIN="multiexchange.pauservices.top" 
 EMAIL="paumat17@gmail.com"
 APP_DIR="/home/ubuntu/Multi-Exchange-Connector-API"
 CONFIG="/home/ubuntu/scripts/config.json"
@@ -60,3 +60,47 @@ sudo rm -f /etc/nginx/sites-enabled/default || true
 # Test and restart Nginx
 sudo nginx -t
 sudo systemctl restart nginx
+
+
+# Optain SSL certificate if not lready predent
+if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+    sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos -m $EMAIL
+fi
+
+# Update Nginx configuration to use HTTPS
+sudo bash -c "cat > $NGINX_CONF" <<EOL
+# Redirect HTTP to HTTPS
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
+    return 301 https://\$host\$request_uri;
+}
+
+# HTTPS Server Block
+server {
+    listen 443 ssl;
+    server_name $DOMAIN www.$DOMAIN;
+
+    ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOL
+
+# Test and reload Nginx with the new configuration
+sudo nginx -t
+sudo systemctl reload nginx
+
+# Update 'first_time' flag if necessary
+if [[ "$FIRST_TIME" == "true" ]]; then
+    jq '.first_time = false' "$CONFIG" > temp.json && mv temp.json "$CONFIG"
+fi
