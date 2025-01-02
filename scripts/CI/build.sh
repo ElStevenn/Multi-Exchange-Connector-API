@@ -20,6 +20,9 @@ FIRST_TIME=$(jq -r '.first_time' "$CONFIG")
 # Ensure Nginx configuration directories exist
 sudo mkdir -p "$NGINX_CONF_DIR" "$NGINX_ENABLED_DIR"
 
+# Remove any existing server blocks for the domain
+sudo grep -Rl "server_name .*multiexchange.pauservices.top" /etc/nginx/sites-enabled/ | xargs sudo rm -f || true
+
 # Stop and remove container
 docker container stop $CONTAINER_NAME >/dev/null 2>&1 || true
 docker container rm $CONTAINER_NAME >/dev/null 2>&1 || true
@@ -50,36 +53,23 @@ server {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
 }
 EOL
 
+# Create directory for Certbot challenges
+sudo mkdir -p /var/www/certbot
+
 # Enable the Nginx configuration
-sudo ln -sf "$NGINX_CONF" "$NGINX_ENABLED_DIR/$DOMAIN"
+sudo ln -sf "$NGINX_CONF" "$NGINX_ENABLED_DIR/multiexchange"
 sudo rm -f /etc/nginx/sites-enabled/default || true
 
 # Test and restart Nginx
 sudo nginx -t
 sudo systemctl restart nginx
-
-# Verify DNS resolution before running Certbot
-echo "Verifying DNS resolution for $DOMAIN and www.$DOMAIN..."
-
-DNS_A=$(dig +short A $DOMAIN)
-DNS_AAAA=$(dig +short AAAA $DOMAIN)
-DNS_A_WWW=$(dig +short A www.$DOMAIN)
-DNS_AAAA_WWW=$(dig +short AAAA www.$DOMAIN)
-
-if [[ -z "$DNS_A" && -z "$DNS_AAAA" ]]; then
-    echo "Error: DNS A and AAAA records for $DOMAIN are not set."
-    exit 1
-fi
-
-if [[ -z "$DNS_A_WWW" && -z "$DNS_AAAA_WWW" ]]; then
-    echo "Error: DNS A and AAAA records for www.$DOMAIN are not set."
-    exit 1
-fi
-
-echo "DNS records verified. Proceeding with Certbot."
 
 # Obtain SSL certificate if not already present
 if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
