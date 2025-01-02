@@ -54,15 +54,34 @@ server {
 EOL
 
 # Enable the Nginx configuration
-sudo ln -sf "$NGINX_CONF" "$NGINX_ENABLED_DIR/fundy_api"
+sudo ln -sf "$NGINX_CONF" "$NGINX_ENABLED_DIR/$DOMAIN"
 sudo rm -f /etc/nginx/sites-enabled/default || true
 
 # Test and restart Nginx
 sudo nginx -t
 sudo systemctl restart nginx
 
+# Verify DNS resolution before running Certbot
+echo "Verifying DNS resolution for $DOMAIN and www.$DOMAIN..."
 
-# Optain SSL certificate if not lready predent
+DNS_A=$(dig +short A $DOMAIN)
+DNS_AAAA=$(dig +short AAAA $DOMAIN)
+DNS_A_WWW=$(dig +short A www.$DOMAIN)
+DNS_AAAA_WWW=$(dig +short AAAA www.$DOMAIN)
+
+if [[ -z "$DNS_A" && -z "$DNS_AAAA" ]]; then
+    echo "Error: DNS A and AAAA records for $DOMAIN are not set."
+    exit 1
+fi
+
+if [[ -z "$DNS_A_WWW" && -z "$DNS_AAAA_WWW" ]]; then
+    echo "Error: DNS A and AAAA records for www.$DOMAIN are not set."
+    exit 1
+fi
+
+echo "DNS records verified. Proceeding with Certbot."
+
+# Obtain SSL certificate if not already present
 if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
     sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos -m $EMAIL
 fi
