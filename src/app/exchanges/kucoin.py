@@ -1,0 +1,4 @@
+
+
+class KucoinLayerConnection():
+    pass

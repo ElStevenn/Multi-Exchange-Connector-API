@@ -108,26 +108,23 @@ class BitgetLayerConnection():
     async def spot_assets(self) -> dict:
         """Get account assets and whether are frozen or locked"""
         request = "/api/v2/spot/account/assets"
-        url = f"{self.api_url}{request}"
-        params = {"coin": "USDT"} 
-        headers = self.get_headers("GET", request, params, {})
+        url = f"{self.api_url}{request}" 
+        headers = self.get_headers("GET", request, {}, {})
         response_data = await self.proxy.curl_api(
             url=url,
-            body=params,
+            body={},
             method="GET",
             headers=headers,
             ip=self.ip
         )
-        
-        if response_data.get('msg') == 'success':
-            account_list = response_data.get('data', None)[0]
 
-            return {
-                "available": float(account_list.get('available', None)),
-                "limitAvailable": float(account_list.get('limitAvailable', None)),
-                "frozen": float(account_list.get('frozen', None)),
-                "locked": float(account_list.get('locked', None)),
-            }
+        print(response_data)
+
+        if response_data.get('msg') == 'success':
+            asset_list = response_data.get('data', None)
+
+            assets = [{"symbol": asset['coin'], 'available': asset['available'], 'limitAvailable': asset['limitAvailable'], 'frozen': asset['frozen'], 'locked': asset['locked']} for asset in asset_list]
+            return assets
 
         else:
             # Remove machine IP from blacklist, because this was an error it had in the past
@@ -228,24 +225,48 @@ class BitgetLayerConnection():
             await self.proxy.remove_ip_blacklist(ip=available_ip)            
             raise HTTPException(status_code=400, detail="An error occurred, please try again later")
 
+
+    async def account_balance(self) -> dict:
+        """Get account balance of each account"""
+        request = "/api/v2/account/all-account-balance"
+        url = f"{self.api_url}{request}" 
+        headers = self.get_headers("GET", request, {}, {})
+        response_data = await self.proxy.curl_api(
+            url=url,
+            body={},
+            method="GET",
+            headers=headers,
+            ip=self.ip
+        )
+
+        if response_data.get('msg') == 'success':
+            balance_list = response_data.get('data', None)
+            
+            result = {
+                "total": sum([float(balance['usdtBalance']) for balance in balance_list]),
+                "accounts": {
+                    balance['accountType']: float(balance['usdtBalance'])
+                    for balance in balance_list
+                }
+            }
+
+            return result
+        else:
+            print("An error ocurred: ",response_data)
+            return None
+
 async def main_test_bitget():
     proxy = await BrightProxy.create()
     ip = "58.97.135.175"
 
 
-    bitget_connection = BitgetLayerConnection(
-        api_key="bg_7a55b38c349edfa10c66423cdf0817b0",
-        api_secret_key="c30f1a5b694ebeaa5872f8e48fdcd3273ee961de025d967bc4a1b7b4104119e6",
-        passphrase="EstoyHastaLaPutaPolla",
-        proxy=proxy,
-        ip=ip
-    )
-
     # acc_info = await bitget_connection.get_account_information()
     # print(acc_info)
 
+
+
     # # Test the "assets" endpoint
-    acc_assets = await bitget_connection.spot_assets()
+    # acc_assets = await bitget_connection.account_balance()
     print("Account assets:", acc_assets)
 
 if __name__ == "__main__":

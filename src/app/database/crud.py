@@ -21,11 +21,6 @@ def db_connection(func):
                 try:
                     result = await func(session, *args, **kwargs)
                     return result
-                except OSError:
-                    raise HTTPException(
-                        status_code=503,
-                        detail="DB connection in the server does not work, maybe the container is not running or IP is wrong since you've restarted the node",
-                    )
                 except IntegrityError as e:
                     await session.rollback()
                     raise HTTPException(status_code=400, detail=str(e))
@@ -134,7 +129,7 @@ async def get_account_credentials(session: AsyncSession, account_id: str):
         "apikey": credentials.get_apikey(),
         "secret_key": credentials.get_secret_key(),
         "passphrase": credentials.get_passphrase(),
-        "exchange_name": credentials.exchange_name
+        "exchange": credentials.exchange_name
     }
 
     
@@ -278,11 +273,47 @@ async def add_balance_historical_metadata(session: AsyncSession, account_id: str
     await session.flush()    
     return balance_historical_metadata.id
 
+# - - - USER BALANCE - - - 
+@db_connection
+async def trim_balance_history_per_user(session: AsyncSession, user_id: str, max_records: int = 13140):
+    """
+    Trim the BalanceAccountHistory table for a specific user_id to ensure
+    that only the latest `max_records` are retained across all accounts.
+    """
+    try:
+        # Subquery to select IDs of records to keep (latest `max_records` across all accounts)
+        subquery = (
+            select(BalanceAccountHistory.id)
+            .join(Account, BalanceAccountHistory.account_id == Account.account_id)
+            .where(Account.user_id == user_id)
+            .order_by(BalanceAccountHistory.timestamp.desc())
+            .limit(max_records)
+            .subquery()
+        )
+
+        # Delete records not in the subquery (i.e., older records)
+        delete_stmt = (
+            delete(BalanceAccountHistory)
+            .where(
+                BalanceAccountHistory.account_id.in_(
+                    select(Account.account_id).where(Account.user_id == user_id)
+                ),
+                BalanceAccountHistory.id.notin_(select(subquery.c.id))
+            )
+        )
+
+        await session.execute(delete_stmt)
+        await session.commit()
+    except Exception as e:
+        await session.rollback()
+        raise
+
+
 async def database_crud_testing():
     user_id = "2141ec7d-8156-4462-9a8e-0cf37b11997d"
     account_id = "1530240371"
 
-    result = await get_main_account("2141ec7d-8156-4462-9a8e-0cf37b11997d")
+    result = await get_user_accounts("94615a24-5243-41a3-8f27-5dae288d2c7e")
     print(result)
 
 if __name__ == "__main__":

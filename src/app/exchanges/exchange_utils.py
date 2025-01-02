@@ -1,4 +1,4 @@
-import asyncio
+import asyncio, logging
 from typing import Optional
 from aiohttp import ClientSession, ClientError
 
@@ -7,6 +7,8 @@ from fastapi import HTTPException
 from ..proxy import BrightProxy
 from .bitget_layer import BitgetLayerConnection
 from .binance_layer import BinanceLayerConnection
+
+logger = logging.getLogger(__name__)
 
 async def validate_account(exchange, proxy: BrightProxy, apikey: Optional[str] = None, secret_key: Optional[str] = None, passphrase: Optional[str] = None, proxy_ip: Optional[str] = None):
     """Validate account credentials"""
@@ -40,69 +42,35 @@ async def validate_account(exchange, proxy: BrightProxy, apikey: Optional[str] =
 
     # Return -> account_permisions, account_id | 401 error | 400 error
 
-async def get_account_assets_(account_id, exchange, proxy: BrightProxy, apikey: Optional[str] = None, secret_key: Optional[str] = None, passphrase: Optional[str] = None, proxy_ip: Optional[str] = None):
+async def get_account_balance_(account_id, exchange, proxy: BrightProxy, apikey: Optional[str] = None, secret_key: Optional[str] = None, passphrase: Optional[str] = None, proxy_ip: Optional[str] = None):
     """
-        return -> avariable_accounts, unrealizedPL, asset_list
+        return -> total, accounts[spot, futures, margin, [...]]
+
     
     """
     if exchange == 'bitget':
-            bitget_account = BitgetLayerConnection(
-                api_key=apikey,
-                api_secret_key=secret_key,
-                passphrase=passphrase,
-                proxy=proxy,
-                ip=proxy_ip
-            )
+        bitget_account = BitgetLayerConnection(
+            api_key=apikey,
+            api_secret_key=secret_key,
+            passphrase=passphrase,
+            proxy=proxy,
+            ip=proxy_ip
+        )
 
-            # Run all asset fetch calls concurrently
-            future_assets_task = bitget_account.furues_assets()
-            spot_assets_task = bitget_account.spot_assets()
-            margin_account_task = bitget_account.margin_assets_summary()
-            
-            future_assets, spot_assets, margin_account = await asyncio.gather(
-                future_assets_task,
-                spot_assets_task,
-                margin_account_task
-            )
+        # Get Bitget account balance
+        balance = await bitget_account.account_balance()
 
-            # Process Futures Account
-            future_account = {
-                "available": float(future_assets.get('available', 0.0)),
-                "unrealizedPL": float(future_assets.get('unrealizedPL', 0.0)),
-                "assetList": future_assets.get('assetList', [])
-            }
-
-            # Process Spot Account
-            spot_account = {
-                "available": float(spot_assets.get('available', 0.0)),
-                "limitAvailable": float(spot_assets.get('limitAvailable', 0.0)),
-                "frozen": float(spot_assets.get('frozen', 0.0)),
-                "locked": float(spot_assets.get('locked', 0.0)),
-            }
-
-            # Final Response
-            final_return = {
-                "exchange": "bitget",
-                "account_id": account_id,
-                "total_balance": (
-                    future_account["available"] +
-                    spot_account["available"] +
-                    margin_account["total"]["totalAmount"]
-                ),
-                "future_account": future_account,
-                "spot_account": spot_account,
-                "margin_account": margin_account
-            }
-
-            return final_return
+        return balance
 
     elif exchange == 'binance':
         pass
 
     elif exchange == 'okx':
+        okx_account = None
         pass
 
     elif exchange == 'kucoin':
+        kucoin_account = None
         pass
 
 
@@ -133,8 +101,7 @@ async def get_asset_price_in_usd(asset: str) -> float:
 async def exchange_utils_testing():
     proxy = await BrightProxy().create()
    
-    res = await get_asset_price_in_usd("usd")
-    print(res)
+
     
 if __name__ == "__main__":
     asyncio.run(exchange_utils_testing())

@@ -12,3 +12,4 @@ psycopg2
 pyjwt
 greenlet
 Celery
+asgiref
