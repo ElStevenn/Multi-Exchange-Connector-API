@@ -177,7 +177,7 @@ async def get_total_assets(user_id: str, account_id: Optional[str] = "all"):
 
         balance = await get_account_balance_(
             account_id=account["id"],
-            exchange=credentials["exchange_name"],
+            exchange=credentials["exchange"],
             proxy=proxy,
             apikey=credentials.get("apikey"),
             secret_key=credentials.get("secret_key"),
