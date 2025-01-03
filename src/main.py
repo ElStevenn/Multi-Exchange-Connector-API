@@ -184,6 +184,7 @@ async def get_total_assets(user_id: str, account_id: Optional[str] = "all"):
             passphrase=credentials.get("passphrase"),
             proxy_ip=account_information.get("proxy_ip"),
         )
+        print("Balance response", balance)
 
         # Aggregate balances
         final_result["total"] += balance["total"]
