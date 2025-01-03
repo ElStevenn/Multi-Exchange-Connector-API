@@ -17,4 +17,4 @@ work_dir="/src/src"
 # Check if proxy works
 echo -e "\nTesting proxy..."
 docker cp /home/ubuntu/Multi-Exchange-Connector-API/src/app/proxy.py $container_name:$work_dir/app/proxy.py
-docker exec -it -w $work_dir $container_name python -m src.app.proxy
+docker exec -it -w $work_dir $container_name python -m app.proxy
