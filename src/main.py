@@ -19,7 +19,7 @@ from src.app.schemas import (
 )
 from src.app.proxy import BrightProxy
 from src.app.exchanges.bitget_layer import BitgetLayerConnection
-from src.app.exchanges.exchange_utils import validate_account, get_account_assets_
+from src.app.exchanges.exchange_utils import validate_account, get_account_balance_
 
 from src.config import DOMAIN
 
@@ -146,10 +146,11 @@ async def refresh_token():
 # ------------------------------------------------------------------------------
 
 #
-# ASSETS
+# Balance
 #
-@app.get("/assets/overview", description="### Get total assets of all accounts", tags=["Assets"])
-async def get_total_assets(user_id: str):
+
+@app.get("/balance/overview/{account_id}", description="### Get total assets of all accounts", tags=["Balance"])
+async def get_total_assets(user_id: str, account_id: Optional[str] = "all"):
     proxy = await BrightProxy.create()
 
     # Fetch user accounts
@@ -158,51 +159,49 @@ async def get_total_assets(user_id: str):
     if not accounts:
         raise HTTPException(status_code=404, detail="No accounts found for this user.")
 
-    async def process_account(account):
-        """Fetch assets for a single account."""
-        try:
-            account_information = await crud.get_account(account_id=account["id"])
-            credentials = await crud.get_account_credentials(account_id=account["id"])
+    # Filter accounts if a specific account ID is provided
+    if account_id != "all":
+        accounts = [acc for acc in accounts if acc["id"] == account_id]
+        if not accounts:
+            raise HTTPException(status_code=404, detail=f"No account found with ID: {account}")
 
-            assets = await get_account_assets_(
-                account_id=account["id"],
-                exchange=credentials["exchange_name"],
-                proxy=proxy,
-                apikey=credentials.get("apikey"),
-                secret_key=credentials.get("secret_key"),
-                passphrase=credentials.get("passphrase"),
-                proxy_ip=account_information.get("proxy_ip"),
-            )
-
-            return {
-                "exchange": credentials["exchange_name"],
-                "account_total_balance": assets["total_balance"],
-                "assets": assets,
-            }
-        except Exception as e:
-            return {
-                "account_id": account["id"],
-                "error": str(e)
-            }
-
-    # Process all accounts concurrently
-    assets_overview = await asyncio.gather(
-        *(process_account(account) for account in accounts),
-        return_exceptions=False
-    )
-
-    # Aggregate total balance across all exchanges
-    total_assets = sum(
-        account.get("total_balance", 0) 
-        for account in assets_overview 
-        if "total_balance" in account
-    )
-
-    return {
-        "total_balance": total_assets,
-        "accounts": assets_overview
+    # Fetch account balances
+    final_result = {
+        "total": 0.0,
+        "accounts": {}
     }
 
+    for account in accounts:
+        account_information = await crud.get_account(account_id=account["id"])
+        credentials = await crud.get_account_credentials(account_id=account["id"])
+
+        balance = await get_account_balance_(
+            account_id=account["id"],
+            exchange=credentials["exchange_name"],
+            proxy=proxy,
+            apikey=credentials.get("apikey"),
+            secret_key=credentials.get("secret_key"),
+            passphrase=credentials.get("passphrase"),
+            proxy_ip=account_information.get("proxy_ip"),
+        )
+
+        # Aggregate balances
+        final_result["total"] += balance["total"]
+
+        for account_type, amount in balance["accounts"].items():
+            if account_type in final_result["accounts"]:
+                final_result["accounts"][account_type] += amount
+            else:
+                final_result["accounts"][account_type] = amount
+
+    return final_result
+
+        
+
+
+#
+# Assets
+#
 
 @app.get("/assets/list", description="### Retrive a list of assets per exchange", tags=["Assets"])
 async def get_assets_overview(user_id: Annotated[tuple[str, str], Depends(get_current_active_user)]):

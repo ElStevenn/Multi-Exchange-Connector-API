@@ -9,6 +9,6 @@ echo "Checking databases"
 docker cp /home/ubuntu/Multi-Exchange-Connector-API/src/app/database/database.py $container_name:/src/app/database/database.py
 docker exec -it -w / $container_name python -m src.app.database.database
 
-sleep 5
+sleep 2
 
-# 
+docker logs --follow $container_name
