@@ -1,9 +1,12 @@
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import inspect
-import asyncio
+import asyncio, sys, os
 
-from src.config import DB_HOST, DB_NAME, DB_PASS, DB_USER, BASE_DIR
-from .models import Base
+if len(sys.argv) > 1 and sys.argv[1] == "test":
+    from src.config import DB_HOST, DB_NAME, DB_PASS, DB_USER, BASE_DIR
+    # from .models import Base
+else:
+    from config import DB_HOST, DB_NAME, DB_PASS, DB_USER, BASE_DIR
 
 # Database engine 
 if BASE_DIR.startswith('/home/mrpau'):
