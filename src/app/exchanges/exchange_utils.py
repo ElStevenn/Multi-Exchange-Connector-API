@@ -42,7 +42,7 @@ async def validate_account(exchange, proxy: BrightProxy, apikey: Optional[str] =
 
     # Return -> account_permisions, account_id | 401 error | 400 error
 
-async def get_account_balance_(account_id, exchange, proxy: BrightProxy, apikey: Optional[str] = None, secret_key: Optional[str] = None, passphrase: Optional[str] = None, proxy_ip: Optional[str] = None):
+async def wget_account_balance_(account_id, exchange, proxy: BrightProxy, apikey: Optional[str] = None, secret_key: Optional[str] = None, passphrase: Optional[str] = None, proxy_ip: Optional[str] = None):
     """
         return -> total, accounts[spot, futures, margin, [...]]
 

@@ -127,6 +127,12 @@ class BrightProxy:
                     }
         except Exception as e:
             logger.error(f"Error during curl_api: {e}", exc_info=True)
+            
+            if e == '401 Auth Failed (code: ip_blacklisted)':
+                machine_ip = await self.get_machine_ip()
+                await self.remove_ip_blacklist(machine_ip)
+                raise HTTPException(status_code=401, detail="Your IP address has been blacklisted, reload again the page to see your response")
+
             return {"error": str(e)}
 
     async def get_zones(self) -> list:
