@@ -131,6 +131,7 @@ class BrightProxy:
             if str(e).startswith('401'):
                 machine_ip = await self.get_machine_ip()
                 await self.remove_ip_blacklist(machine_ip)
+                await self.set_whitlist_ip(machine_ip)
                 raise HTTPException(status_code=401, detail="Your IP address has been blacklisted, reload again the page to see your response")
 
             return {"error": str(e)}
@@ -201,6 +202,22 @@ class BrightProxy:
             response = await client.get(url, headers=headers, params={"zone": self.zones[0]})
             logger.info(f"Blacklisted IPs: {response.json()}")
     
+    async def set_whitlist_ip(self, ip: str):
+        """Add an IP to the whitelist"""
+        url = "https://api.brightdata.com/zone/whitelist"
+        headers = {"Authorization": f"Bearer {BRIGHTDATA_API_TOKEN}"}
+        payload = {"ip": ip, "zone": self.zones[0]}
+
+        async with httpx.AsyncClient() as client:
+            response = await client.request(
+                "POST",
+                url,
+                headers=headers,
+                json=payload
+            )
+
+            return response.status_code, response.json()
+
     async def get_machine_ip(self):
         """Get the IP of the machine"""
         async with httpx.AsyncClient() as client:
@@ -213,16 +230,8 @@ class BrightProxy:
 async def proxy_testing():
     proxy = await BrightProxy.create()
 
-    res = await proxy.get_machine_ip()
-    print(f"Machine IP: {res}")
-    # Uncomment below lines to test curl_api
-    result = await proxy.curl_api(
-        url="https://ifconfig.me/all.json",
-        method="GET",
-        ip="58.97.135.175"
-    )
-    print("Result from curl_api:", result)
-
+    res = await proxy.get_blacklisted_ips()
+    print(f"Blacklisted IPs: {res}")
 if __name__ == "__main__":
     # Make sure to explicitly run this using the venv python,
     # e.g., ./venv/bin/python -m src.app.proxy
