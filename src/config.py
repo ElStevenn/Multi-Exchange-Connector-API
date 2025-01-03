@@ -55,4 +55,4 @@ PUBLIC_KEY = load_public_key('security/public_key.pem')
 PRIVATE_KEY = load_private_key('security/private_key.pem')
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-jwt-secret-key')
 
-AVARIABLE_EXCHANGES = ['bitget', 'binance', 'okx']
+AVARIABLE_EXCHANGES = ['bitget', 'binance', 'okx', 'kucoin']

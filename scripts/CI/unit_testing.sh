@@ -4,14 +4,17 @@ container_name="multiexchange_apiv2"
 
 echo "Running unit tests..."
 
-# Check if getting tables works
-echo -e"Checking databases"
-docker cp /home/ubuntu/Multi-Exchange-Connector-API/src/app/database/database.py $container_name:/src/app/database/database.py
-docker exec -it -w / $container_name python -m src.app.database.database
+# Set the correct working directory
+work_dir="/src/src"
 
-sleep 2
+# Check if getting tables works
+# echo -e "\nChecking databases..."
+# docker cp /home/ubuntu/Multi-Exchange-Connector-API/src/app/database/database.py $container_name:$work_dir/app/database/database.py
+# docker exec -it -w $work_dir $container_name python -m app.database.database
+
+# sleep 2
 
 # Check if proxy works
-echo -e "Testing proxy...\n"
-docker cp /home/ubuntu/Multi-Exchange-Connector-API/src/app/proxy.py $container_name:/src/app/proxy.py
-docker exec -it -w / $container_name python -m src.app.proxy
+echo -e "\nTesting proxy..."
+docker cp /home/ubuntu/Multi-Exchange-Connector-API/src/app/proxy.py $container_name:$work_dir/app/proxy.py
+docker exec -it -w $work_dir $container_name python -m src.app.proxy

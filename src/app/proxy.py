@@ -11,8 +11,12 @@ from typing import Optional, Literal
 from fastapi import HTTPException
 import logging
 
-from src.config import BRIGHTDATA_API_TOKEN
-from src.app.database.crud import get_used_ips
+if sys.argv[1] == "test":
+    from src.config import BRIGHTDATA_API_TOKEN
+    from src.app.database.crud import get_used_ips
+else:
+    from config import BRIGHTDATA_API_TOKEN
+    from app.database.crud import get_used_ips
 
 logger = logging.getLogger(__name__)
 

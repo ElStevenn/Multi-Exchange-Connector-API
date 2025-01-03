@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from ..proxy import BrightProxy
 from .bitget_layer import BitgetLayerConnection
 from .binance_layer import BinanceLayerConnection
+from .kucoin_layer import KucoinLayerConnection
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,16 @@ async def validate_account(exchange, proxy: BrightProxy, apikey: Optional[str] =
         raise HTTPException(status_code=400, detail="Exchange not supported yet")
 
     elif exchange == 'kucoin':
-        raise HTTPException(status_code=400, detail="Exchange not supported yet")
+       bitget_account = KucoinLayerConnection(
+            api_key=apikey,
+            secret_key=secret_key,
+            proxy=proxy,
+            ip=proxy_ip
+        )
+       
+       account_information = await bitget_account.get_account_information()
+
+       return account_information
 
     # Return -> account_permisions, account_id | 401 error | 400 error
 
