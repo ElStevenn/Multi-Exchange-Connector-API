@@ -19,7 +19,7 @@ async def get_all_tables():
             return inspector.get_table_names()
         
         table_names = await conn.run_sync(sync_get_table_names)
-        print(table_names)
+        print("table names -> ",table_names)
     return table_names
 
 

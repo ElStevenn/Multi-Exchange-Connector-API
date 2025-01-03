@@ -129,7 +129,7 @@ class BrightProxy:
             logger.error(f"Error during curl_api: {e}", exc_info=True)
             
             if str(e).startswith('401'):
-                machine_ip = await self.get_machine_ip()
+                machine_ip = await self.get_machine_ip(); print(machine_ip)
                 await self.remove_ip_blacklist(machine_ip)
                 await self.set_whitlist_ip(machine_ip)
                 raise HTTPException(status_code=401, detail="Your IP address has been blacklisted, reload again the page to see your response")
@@ -230,8 +230,16 @@ class BrightProxy:
 async def proxy_testing():
     proxy = await BrightProxy.create()
 
-    res = await proxy.get_blacklisted_ips()
-    print(f"Blacklisted IPs: {res}")
+    # Test proxy
+    response = await proxy.curl_api(
+        url="https://ifconfig.me/all.json",
+        method="GET",
+        ip="58.97.135.175"
+    )
+    print("Result from curl_api:", response)
+    
+    # res = await proxy.remove_ip_blacklist("51.94.11.0")
+    # print(f"Blacklisted IPs: {res}")
 if __name__ == "__main__":
     # Make sure to explicitly run this using the venv python,
     # e.g., ./venv/bin/python -m src.app.proxy
