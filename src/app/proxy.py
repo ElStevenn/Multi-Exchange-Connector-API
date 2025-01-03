@@ -11,7 +11,7 @@ from typing import Optional, Literal
 from fastapi import HTTPException
 import logging
 
-if sys.argv[1] == "test":
+if len(sys.argv) > 1 and sys.argv[1] == "test":
     from src.config import BRIGHTDATA_API_TOKEN
     from src.app.database.crud import get_used_ips
 else:
