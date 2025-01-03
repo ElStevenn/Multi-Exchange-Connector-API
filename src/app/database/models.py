@@ -3,9 +3,12 @@ from sqlalchemy.dialects.postgresql import UUID as pgUUID, JSON
 from sqlalchemy.orm import relationship, declarative_base
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
-from src.config import PRIVATE_KEY
-import uuid
-import base64
+import uuid, base64, sys
+
+if len(sys.argv) > 1 and sys.argv[1] == "test":
+    from src.config import PRIVATE_KEY
+else:
+    from config import PRIVATE_KEY
 
 Base = declarative_base()
 
