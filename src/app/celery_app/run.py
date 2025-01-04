@@ -2,9 +2,9 @@
 import sys
 
 if len(sys.argv) > 1 and sys.argv[1] == "test":
-    from src.app.celery.tasks import fetch_user_assets_concurrently
+    from src.app.celery_app.tasks import fetch_user_assets_concurrently
 else:
-    from app.celery.tasks import fetch_user_assets_concurrently
+    from app.celery_app.tasks import fetch_user_assets_concurrently
 
 def main():
     result = fetch_user_assets_concurrently.delay()
