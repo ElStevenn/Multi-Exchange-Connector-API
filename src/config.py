@@ -32,7 +32,12 @@ DB_USER = os.getenv('DB_USER', 'db-user')
 DB_PASS = os.getenv('DB_PASS', 'db-pass')
 
 # REDIS
-REDIS_URL = f'redis://{os.getenv('LOCAL_REDIS_HOST')}:6379/0' if ENVIROMENT == 'dev' else '' 
+# REDIS Configuration
+REDIS_URL = (
+    f'redis://{os.getenv("LOCAL_REDIS_HOST", "127.0.0.1")}:6379/0'
+    if ENVIROMENT == 'dev'
+    else f'redis://{os.getenv("TEST_REDIS_HOST", "multiexchange_redis_v1")}:6379/0'
+)
 
 
 # SECURITY
