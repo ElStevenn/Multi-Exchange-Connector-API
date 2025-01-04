@@ -35,14 +35,8 @@ if [ -f "$config" ]; then
 
         if [[ "$REDIS" == "false" ]]; then
             echo "Setting up redis"
-            docker pull redis:latest
-            docker run -d \
-                --name "$redis" \
-                --network "$network_name" \
-                --volume "$volume_name":/redis_data \
-                -p 6379:6379 \
-                --restart unless-stopped \
-                redis --appendonly yes --dir /redis_data
+            docker-compose -f /home/ubuntu/Multi-Exchange-Connector-API/docker-compose.yml build redis
+            docker-compose -f /home/ubuntu/Multi-Exchange-Connector-API/docker-compose.yml up -d --no-deps redis
 
             sudo jq '.redis = true' "$config" | sudo tee "$config.tmp" > /dev/null && sudo mv "$config.tmp" "$config"
         fi

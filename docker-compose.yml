@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   api:
     build: .
@@ -31,7 +29,10 @@ services:
     networks:
       - multiexchange_network
     volumes:
-      - multiexchange_volume:/data
+      - multiexchange_volume:/redis_data
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes", "--dir", "/redis_data"]
 
 networks:
   multiexchange_network:

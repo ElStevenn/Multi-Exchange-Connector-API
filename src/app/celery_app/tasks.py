@@ -33,7 +33,7 @@ def run_async(coroutine):
     except Exception as e:
         logger.error(f"Error running async task in thread: {e}", exc_info=True)
 
-@celery_app.task
+@celery_app.task(name='app.celery_app.tasks.fetch_user_assets_concurrently')
 def fetch_user_assets_concurrently():
     """
     Celery task to fetch assets for all users concurrently in batches of 100.
