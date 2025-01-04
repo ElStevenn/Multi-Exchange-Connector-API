@@ -8,18 +8,10 @@ network_name="multiexchange_network"
 volume_name="multiexchange_volume"
 redis="multiexchange_redis_v1"
 
-
-# Update packages and install dependencies
-sudo apt-get update -y
-
-# Install required packages
-sudo apt-get install -y nginx certbot python3-certbot-nginx jq
-
-
 # Configure 
 if [ -f "$config" ]; then
     echo "Config file found."
-
+    
     if [[ -s "$config" ]]; then
         NETWORK=$(jq -r '.network' $config)
         VOLUME=$(jq -r '.volume' $config)
