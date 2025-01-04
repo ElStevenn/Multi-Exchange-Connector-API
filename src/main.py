@@ -24,7 +24,7 @@ from src.app.exchanges.exchange_utils import validate_account, get_account_balan
 from src.config import DOMAIN
 
 app = FastAPI(
-    title="Multi-Exchange Connector API",
+    title="Multi-Exchange Connector APIO",
     description=(
         "The **Multi-Exchange Connector API** provides a unified interface for managing "
         "cryptocurrency trading accounts and operations across multiple exchanges. It "
@@ -38,7 +38,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost", "http://localhost:8001"],
+    allow_origins=["http://localhost", "http://localhost:8001"] if DOMAIN else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

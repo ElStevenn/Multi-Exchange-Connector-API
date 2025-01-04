@@ -120,9 +120,6 @@ resource "aws_instance" "multiexchange_api" {
   provisioner "remote-exec" {
     inline = [
       "sudo chmod +x /home/ubuntu/scripts/CI/*",
-      "sudo usermod -aG docker ubuntu",
-      "sudo systemctl restart docker",
-      "sudo chmod 666 /var/run/docker.sock",
       "sudo chmod 644 /home/ubuntu/scripts/config.json",
       "bash /home/ubuntu/scripts/CI/source.sh"
     ]
@@ -158,10 +155,14 @@ resource "aws_eip_association" "main_api_eip_assoc" {
 resource "null_resource" "post_eip_setup" {
   depends_on = [aws_eip_association.main_api_eip_assoc]
 
-    provisioner "remote-exec" {
+  provisioner "remote-exec" {
     inline = [
-      "chmod +x /home/ubuntu/scripts/CI/*",
-      "bash /home/ubuntu/scripts/CI/build.sh",
+      "sudo chmod +x /home/ubuntu/scripts/CI/*",
+      "sudo chmod 644 /home/ubuntu/scripts/config.json",
+      "sudo usermod -aG docker ubuntu",
+      "sudo systemctl restart docker",
+      "sudo chmod 666 /var/run/docker.sock",
+      "bash /home/ubuntu/scripts/CI/build.sh"
     ]
     connection {
       type        = "ssh"

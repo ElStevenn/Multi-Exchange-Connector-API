@@ -15,7 +15,7 @@ HOSTNAME = socket.gethostname()
 # BRIGHT DATA API
 BRIGHTDATA_API_TOKEN = os.getenv('BRIGHTDATA_API_TOKEN', 'brightdata-api-token')
 
-if HOSTNAME == 'mamadocomputer':
+if BASE_DIR.startswith('/home/mrpau') or HOSTNAME == 'mamadocomputer':
     DOMAIN = None
 else:
     DOMAIN = os.getenv('TEST_DOMAIN', None)
