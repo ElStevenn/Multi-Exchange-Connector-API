@@ -114,8 +114,7 @@ resource "aws_instance" "multiexchange_api" {
       private_key = file("../../src/security/instance_key")
       host        = self.public_ip
     }
-  }
-
+  }  
 
   provisioner "remote-exec" {
     inline = [
@@ -130,6 +129,30 @@ resource "aws_instance" "multiexchange_api" {
       host        = self.public_ip
     }
   }
+
+
+  provisioner "file" {
+    source      = "/home/mrpau/Desktop/Secret_Project/other_layers/Multi-Exchange-Connector-API/src/security/public_key.pem"
+    destination = "/home/ubuntu/Multi-Exchange-Connector-API/src/security/public_key.pem"
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = file("../../src/security/instance_key")
+      host        = self.public_ip
+    }
+  }
+
+  provisioner "file" {
+    source      = "/home/mrpau/Desktop/Secret_Project/other_layers/Multi-Exchange-Connector-API/src/security/private_key.pem"
+    destination = "/home/ubuntu/Multi-Exchange-Connector-API/src/security/private_key.pem"
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = file("../../src/security/instance_key")
+      host        = self.public_ip
+    }
+  }
+
    provisioner "file" {
     source      = "/home/mrpau/Desktop/Secret_Project/other_layers/Multi-Exchange-Connector-API/src/.env"
     destination = "/home/ubuntu/Multi-Exchange-Connector-API/src/.env"

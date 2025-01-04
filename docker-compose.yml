@@ -1,3 +1,4 @@
+
 services:
   api:
     build: .
@@ -22,6 +23,19 @@ services:
     networks:
       - multiexchange_network
 
+  celery-beat:
+    build: .
+    container_name: multiexchange_celery_beat
+    restart: unless-stopped
+    command: celery -A src.app.celery_app.celery_config beat --loglevel=info
+    environment:
+      - ENV=production
+    depends_on:
+      - redis
+      - celery
+    networks:
+      - multiexchange_network
+
   redis:
     image: redis:latest
     container_name: multiexchange_redis_v1
@@ -29,10 +43,17 @@ services:
     networks:
       - multiexchange_network
     volumes:
-      - multiexchange_volume:/redis_data
+      - multiexchange_volume:/data
     ports:
       - "6379:6379"
-    command: ["redis-server", "--appendonly", "yes", "--dir", "/redis_data"]
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --dir
+      - /data
+      - --bind
+      - 0.0.0.0
 
 networks:
   multiexchange_network:
