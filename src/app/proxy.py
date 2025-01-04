@@ -242,7 +242,7 @@ async def proxy_testing():
     )
     print("Result from curl_api:", response)
     
-    # res = await proxy.remove_ip_blacklist("51.94.11.0")
+    # res = await proxy.remove_ip_blacklist("51.94.11.0/24")
     # print(f"Blacklisted IPs: {res}")
 if __name__ == "__main__":
     # Make sure to explicitly run this using the venv python,

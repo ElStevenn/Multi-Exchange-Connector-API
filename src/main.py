@@ -19,7 +19,7 @@ from src.app.schemas import (
 )
 from src.app.proxy import BrightProxy
 from src.app.exchanges.bitget_layer import BitgetLayerConnection
-from src.app.exchanges.exchange_utils import validate_account, get_account_balance_
+from src.app.exchanges.exchange_utils import validate_account, get_account_balance_, get_account_assets_
 
 from src.config import DOMAIN
 
@@ -47,15 +47,7 @@ app.add_middleware(
 # ------------------------------------------------------------------------------
 # AUTHENTICATION (Public - Accessible from Frontend)
 # ------------------------------------------------------------------------------
-@app.post(
-    "/auth/register",
-    description=(
-        "### Register a new account\n\n"
-        "**IMPORTANT**\n"
-        "API Connection Only works with HMAC Signature, so use HMAC only"
-    ),
-    tags=["User Authentication"],
-)
+@app.post("/auth/register", description=("### Register a new account"),tags=["User Authentication"],)
 async def add_new_account(
     user_id: Annotated[tuple[dict, str], Depends(get_current_active_user)],
     request_body: RegisterUser,
@@ -150,20 +142,20 @@ async def refresh_token():
 #
 
 @app.get("/balance/overview/{account_id}", description="### Get total assets of all accounts", tags=["Balance"])
-async def get_total_assets(user_id: str, account_id: Optional[str] = "all"):
+async def get_total_assets(user_id: Annotated[tuple[dict, str], Depends(get_current_active_user)], account_id: Optional[str] = "all"):
     proxy = await BrightProxy.create()
 
     # Fetch user accounts
     accounts = await crud.get_accounts(user_id=user_id)
 
     if not accounts:
-        raise HTTPException(status_code=404, detail="No accounts found for this user.")
+        raise HTTPException(status_code=404, detail="The user doesn't have any account associated.")
 
     # Filter accounts if a specific account ID is provided
     if account_id != "all":
         accounts = [acc for acc in accounts if acc["id"] == account_id]
         if not accounts:
-            raise HTTPException(status_code=404, detail=f"No account found with ID: {account}")
+            raise HTTPException(status_code=404, detail=f"No account found with ID: {account_id}")
 
     # Fetch account balances
     final_result = {
@@ -199,16 +191,38 @@ async def get_total_assets(user_id: str, account_id: Optional[str] = "all"):
 
         
 
-
 #
 # Assets
 #
 
-@app.get("/assets/list", description="### Retrive a list of assets per exchange", tags=["Assets"])
-async def get_assets_overview(user_id: Annotated[tuple[str, str], Depends(get_current_active_user)]):
+@app.get("/assets/list/{account_id}", description="### Retrive a list of assets per exchange", tags=["Assets"])
+async def get_assets_overview(user_id: Annotated[tuple[str, str], Depends(get_current_active_user)], account_id: Optional[str] = "all"):
     proxy = await BrightProxy.create()
 
+    accounts = await crud.get_accounts(user_id=user_id)
 
+    if account_id != "all":
+        accounts = [acc for acc in accounts if acc["id"] == account_id]
+        if not accounts:    
+            raise HTTPException(status_code=404, detail=f"No account found with ID: {account_id}")
+
+    
+    for account in accounts:
+        credentials = await crud.get_account_credentials(account_id=account["id"])
+        if not credentials:
+            raise HTTPException(status_code=404, detail=f"No credentials found for account {account['id']}")
+        
+        assets_account = await get_account_assets_(
+            account_id=account["id"],
+            exchange=credentials["exchange"],
+            proxy=proxy,
+            apikey=credentials["apikey"],
+            secret_key=credentials["secret_key"],
+            passphrase=credentials["passphrase"],            
+            proxy_ip=account["proxy_ip"]
+        )
+
+        
 
     return {}
 

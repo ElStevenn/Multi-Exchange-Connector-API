@@ -137,6 +137,13 @@ async def get_account_credentials(session: AsyncSession, account_id: str):
 @db_connection
 async def get_accounts(session: AsyncSession, user_id: str):
     """Get user accounts"""
+
+    try:
+        UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+
+
     result = await session.execute(
         select(Account)
         .where(Account.user_id == user_id)

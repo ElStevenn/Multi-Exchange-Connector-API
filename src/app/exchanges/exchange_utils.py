@@ -108,6 +108,21 @@ async def get_asset_price_in_usd(asset: str) -> float:
         return 0.0
     
 
+async def get_account_assets_(exchange, proxy: BrightProxy, apikey: Optional[str] = None, secret_key: Optional[str] = None, passphrase: Optional[str] = None, proxy_ip: Optional[str] = None):
+    """Get account assets"""
+    
+    if exchange == 'bitget':
+        pass
+
+    elif exchange == 'binance':
+        pass
+        
+    elif exchange == 'okx':
+        pass
+
+    elif exchange == 'kucoin':
+       pass
+
 async def exchange_utils_testing():
     proxy = await BrightProxy().create()
    
