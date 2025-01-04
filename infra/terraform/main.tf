@@ -119,7 +119,11 @@ resource "aws_instance" "multiexchange_api" {
 
   provisioner "remote-exec" {
     inline = [
-      "chmod +x /home/ubuntu/scripts/CI/*",
+      "sudo chmod +x /home/ubuntu/scripts/CI/*",
+      "sudo usermod -aG docker ubuntu",
+      "sudo systemctl restart docker",
+      "sudo chmod 666 /var/run/docker.sock",
+      "sudo chmod 644 /home/ubuntu/scripts/config.json",
       "bash /home/ubuntu/scripts/CI/source.sh"
     ]
     connection {
@@ -129,7 +133,6 @@ resource "aws_instance" "multiexchange_api" {
       host        = self.public_ip
     }
   }
-
    provisioner "file" {
     source      = "/home/mrpau/Desktop/Secret_Project/other_layers/Multi-Exchange-Connector-API/src/.env"
     destination = "/home/ubuntu/Multi-Exchange-Connector-API/src/.env"
