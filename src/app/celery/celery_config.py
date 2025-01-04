@@ -8,12 +8,12 @@ celery_app = Celery(
     'tasks',
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=['src.app.celery.tasks']  # Include the tasks module
+    include=['src.app.celery.tasks'] 
 )
 
 # General Configuration
 celery_app.conf.update(
-    timezone='UTC',  # Adjust to your preferred timezone
+    timezone='UTC', 
     task_default_queue='celery',
     worker_max_tasks_per_child=100
 )

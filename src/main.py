@@ -24,7 +24,7 @@ from src.app.exchanges.exchange_utils import validate_account, get_account_balan
 from src.config import DOMAIN
 
 app = FastAPI(
-    title="Multi-Exchange Connector APIO",
+    title="Multi-Exchange Connector API",
     description=(
         "The **Multi-Exchange Connector API** provides a unified interface for managing "
         "cryptocurrency trading accounts and operations across multiple exchanges. It "

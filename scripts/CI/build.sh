@@ -37,8 +37,14 @@ fi
 sudo ufw allow 'Nginx Full' || true
 
 cd $APP_DIR
+
+# Build and run API container
 docker build -t "$IMAGE_NAME" .
 docker run -d --name "$CONTAINER_NAME" --network "$NETWORK_NAME" -p 127.0.0.1:8000:8001 "$IMAGE_NAME"
+
+# Build and run Celery container
+docker-compose build celery
+docker-compose up -d celery
 
 # Create Nginx server block for HTTP (temporary for Certbot)
 sudo bash -c "cat > $NGINX_CONF" <<EOL
