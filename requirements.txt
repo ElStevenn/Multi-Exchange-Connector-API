@@ -11,6 +11,6 @@ asyncpg
 psycopg2
 pyjwt
 greenlet
-celery
+celery==5.4.0
 asgiref
 redis
