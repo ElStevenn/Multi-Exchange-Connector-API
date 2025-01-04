@@ -1,9 +1,10 @@
-import asyncio
+import asyncio, sys
 from fastapi import FastAPI
 
-from src.app.proxy import BrightProxy
-
-
+if len(sys.argv) > 1 and sys.argv[1] == "test":
+    from src.app.proxy import BrightProxy
+else:
+    from app.proxy import BrightProxy
 
 class BinanceLayerConnection():
     """
