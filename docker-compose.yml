@@ -16,7 +16,7 @@ services:
     build: .
     container_name: multiexchange_celery
     restart: unless-stopped
-    command: celery -A src.app.celery.celery_config worker --loglevel=info
+    command: celery -A src.app.celery_app.celery_config worker --loglevel=info
     environment:
       - ENV=production
     depends_on:

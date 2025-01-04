@@ -13,7 +13,7 @@ celery_app = Celery(
     'tasks',
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=['src.app.celery.tasks'] 
+    include=['src.app.celery_app.tasks'] 
 )
 
 # General Configuration

@@ -2,18 +2,34 @@
 
 import logging
 import sys
-from src.app.database.crud import (
-    get_all_users,
-    get_user_accounts,
-    get_account_credentials,
-    add_spot_historical_metadata,
-    add_futures_historical_metadata,
-    add_balance_historical_metadata,
-    trim_balance_history_per_user
-)
 
-from src.app.exchanges.exchange_utils import get_account_balance_, get_asset_price_in_usd 
-from src.app.proxy import BrightProxy
+if len(sys.argv) > 1 and sys.argv[1] == "test":
+    from src.app.database.crud import (
+        get_all_users,
+        get_user_accounts,
+        get_account_credentials,
+        add_spot_historical_metadata,
+        add_futures_historical_metadata,
+        add_balance_historical_metadata,
+        trim_balance_history_per_user
+    )
+
+    from src.app.exchanges.exchange_utils import get_account_balance_, get_asset_price_in_usd 
+    from src.app.proxy import BrightProxy
+else:
+    from app.database.crud import (
+        get_all_users,
+        get_user_accounts,
+        get_account_credentials,
+        add_spot_historical_metadata,
+        add_futures_historical_metadata,
+        add_balance_historical_metadata,
+        trim_balance_history_per_user
+    )
+
+    from app.exchanges.exchange_utils import get_account_balance_, get_asset_price_in_usd 
+    from app.proxy import BrightProxy
+    
 import asyncio
 import aiohttp
 from asyncio import Semaphore

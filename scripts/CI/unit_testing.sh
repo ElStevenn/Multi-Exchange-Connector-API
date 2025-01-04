@@ -34,6 +34,6 @@ sleep 2
 # Celery test if gets data
 if [ "$test_celery" == "true" ]; then
     echo -e "\nTesting Celery..."
-    docker exec -it -w $work_dir $celery_container_name python -m app.celery.run
+    docker exec -it -w $work_dir $celery_container_name python -m app.celery_app.run
 
 fi
