@@ -11,5 +11,6 @@ asyncpg
 psycopg2
 pyjwt
 greenlet
-Celery
+celery
 asgiref
+redis

@@ -39,6 +39,9 @@ sudo ufw allow 'Nginx Full' || true
 cd $APP_DIR
 
 # Build and run API container
+docker-comose -f /home/ubuntu/Multi-Exchange-Connector-API/docker-compose.yml build
+docker-comose -f /home/ubuntu/Multi-Exchange-Connector-API/docker-compose.yml up -d --no-deps api
+
 docker build -t "$IMAGE_NAME" .
 docker run -d --name "$CONTAINER_NAME" --network "$NETWORK_NAME" -p 127.0.0.1:8000:8001 "$IMAGE_NAME"
 

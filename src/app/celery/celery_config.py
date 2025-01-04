@@ -1,8 +1,12 @@
 # src/app/celery/celery_config.py
-
+import sys
 from celery import Celery
 from celery.schedules import crontab
-from src.config import REDIS_URL
+
+if len(sys.argv) > 1 and sys.argv[1] == "test":
+    from src.config import REDIS_URL
+else:
+    from config import REDIS_URL
 
 celery_app = Celery(
     'tasks',

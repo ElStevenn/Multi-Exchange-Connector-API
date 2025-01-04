@@ -1,11 +1,16 @@
 # src/app/celery/tasks.py
 
 import logging
-from src.app.celery.celery_config import celery_app
-from src.app.celery.async_tasks import _fetch_user_assets_task
 import asyncio
 import sys
 from concurrent.futures import ThreadPoolExecutor
+
+if len(sys.argv) > 1 and sys.argv[1] == "test":
+    from src.app.celery.celery_config import celery_app
+    from src.app.celery.async_tasks import _fetch_user_assets_task
+else:
+    from app.celery.celery_config import celery_app
+    from app.celery.async_tasks import _fetch_user_assets_task
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
