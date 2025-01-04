@@ -4,12 +4,15 @@ import hmac
 import time
 import json
 import httpx
+import sys
 from typing import Dict
 
 from fastapi import HTTPException
 
-from src.app.proxy import BrightProxy
-
+if len(sys.argv) > 1 and sys.argv[1] == "test":
+    from src.app.proxy import BrightProxy
+else:
+    from app.proxy import BrightProxy
 
 class BitgetLayerConnection():
     def __init__(self, api_key, api_secret_key, passphrase, proxy: BrightProxy, ip: str) -> None:
