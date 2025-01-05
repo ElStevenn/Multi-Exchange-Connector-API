@@ -7,7 +7,7 @@ else:
     from app.celery_app.tasks import fetch_user_assets_concurrently
 
 def main():
-    result = fetch_user_assets_concurrently.delay()
+    result = fetch_user_assets_concurrently.apply_async(queue='once_off_queue')
     print("Task ID:", result.id)
 
 if __name__ == "__main__":
