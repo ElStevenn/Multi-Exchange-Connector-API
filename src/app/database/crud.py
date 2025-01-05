@@ -10,21 +10,28 @@ from sqlalchemy.exc import IntegrityError, DBAPIError, NoResultFound
 
 from .database import async_engine
 from .models import *
+from .models import Base
 
 if len(sys.argv) > 1 and sys.argv[1] == "test":
     from src.app.celery_app.db_engine_holder import engine as global_engine
 else:
     from app.celery_app.db_engine_holder import engine as global_engine
 
-def db_connection(func):
+from sqlalchemy.orm import sessionmaker
+
+SessionLocal = sessionmaker(
+    bind=global_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+async def db_connection(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        # use global_engine
-        async with AsyncSession(global_engine) as session:
+        async with SessionLocal() as session:
             async with session.begin():
                 try:
-                    result = await func(session, *args, **kwargs)
-                    return result
+                    return await func(session, *args, **kwargs)
                 except IntegrityError as e:
                     await session.rollback()
                     raise HTTPException(status_code=400, detail=str(e))
