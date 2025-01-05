@@ -14,7 +14,7 @@ if BASE_DIR.startswith('/home/mrpau'):
 else:
     async_engine = create_async_engine(
         f'postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:5432/{DB_NAME}',
-        echo=True,
+        echo=False,
         future=True,
         pool_size=10,        
         max_overflow=20,
