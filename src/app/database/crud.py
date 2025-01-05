@@ -11,12 +11,16 @@ from sqlalchemy.exc import IntegrityError, DBAPIError, NoResultFound
 from .database import async_engine
 from .models import *
 
-
+if len(sys.argv) > 1 and sys.argv[1] == "test":
+    from src.app.celery_app.db_engine_holder import engine as global_engine
+else:
+    from app.celery_app.db_engine_holder import engine as global_engine
 
 def db_connection(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        async with AsyncSession(async_engine) as session:
+        # use global_engine
+        async with AsyncSession(global_engine) as session:
             async with session.begin():
                 try:
                     result = await func(session, *args, **kwargs)
@@ -24,10 +28,9 @@ def db_connection(func):
                 except IntegrityError as e:
                     await session.rollback()
                     raise HTTPException(status_code=400, detail=str(e))
-                # except DBAPIError as e:
-                #     await session.rollback()
-                #     raise HTTPException(status_code=400, detail="There is probably a wrong data type")
     return wrapper
+
+
 
 
 # - - - PROXY - - - 
