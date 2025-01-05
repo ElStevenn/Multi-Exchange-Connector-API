@@ -1,15 +1,15 @@
-# src/app/celery/celery_config.py
+# src/app/celery_app/celery_config.py
+
 import sys
 import celery as celery_lib
-
-Celery = celery_lib.Celery
 from celery.schedules import crontab
+
 if len(sys.argv) > 1 and sys.argv[1] == "test":
     from src.config import REDIS_URL
 else:
     from config import REDIS_URL
 
-celery_app = Celery(
+celery_app = celery_lib.Celery(
     'tasks',
     broker=REDIS_URL,
     backend=REDIS_URL,
@@ -25,9 +25,9 @@ celery_app.conf.update(
 
 # Celery Beat Schedule
 celery_app.conf.beat_schedule = {
-    'fetch-user-assets-every-hour-on-the-hour': {
-        'task': 'app.celery_app.tasks.fetch_user_assets_concurrently',  # <--- match the decorator
-        'schedule': crontab(minute=0, hour='*'),
+    'fetch-user-assets-every-5-minutes': {
+        'task': 'app.celery_app.tasks.fetch_user_assets_concurrently',
+        'schedule': crontab(minute='5-55/5'),  # Runs at 5,10,15,...55 minutes past the hour
+        'options': {'queue': 'once_off_queue'},  # Ensure it uses the correct queue
     },
 }
-

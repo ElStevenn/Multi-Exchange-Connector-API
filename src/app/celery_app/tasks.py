@@ -1,4 +1,5 @@
-# src/app/celery/tasks.py
+# src/app/celery_app/tasks.py
+
 import logging
 import sys
 import asyncio
@@ -7,7 +8,6 @@ import threading
 from celery.signals import worker_init, worker_shutdown
 from sqlalchemy.ext.asyncio import create_async_engine
 
-# 1) Use the global engine holder
 from .db_engine_holder import engine as global_engine
 
 if len(sys.argv) > 1 and sys.argv[1] == "test":
