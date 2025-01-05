@@ -4,8 +4,10 @@ import logging
 import sys
 import asyncio
 import threading
+
 from celery.signals import worker_init, worker_shutdown
 
+# Import your Celery app, and the async function(s) to run:
 if len(sys.argv) > 1 and sys.argv[1] == "test":
     from src.app.celery_app.celery_config import celery_app
     from src.app.celery_app.async_tasks import _fetch_user_assets_task
@@ -19,10 +21,11 @@ logger = logging.getLogger(__name__)
 # We'll store a global reference to the event loop
 persistent_loop = None
 
+
 @worker_init.connect
 def init_persistent_loop(**kwargs):
     """
-    This signal runs once when the Celery worker process boots up.
+    Runs once when the Celery worker process boots up.
     We create a single event loop here and start it in a dedicated thread.
     """
     global persistent_loop
@@ -40,6 +43,7 @@ def init_persistent_loop(**kwargs):
     t.start()
     logger.info("Persistent loop thread started.")
 
+
 @worker_shutdown.connect
 def shutdown_persistent_loop(**kwargs):
     """
@@ -50,6 +54,7 @@ def shutdown_persistent_loop(**kwargs):
         logger.info("Shutting down persistent loop.")
         persistent_loop.call_soon_threadsafe(persistent_loop.stop)
         persistent_loop = None
+
 
 @celery_app.task(name='app.celery_app.tasks.fetch_user_assets_concurrently')
 def fetch_user_assets_concurrently():
@@ -65,14 +70,13 @@ def fetch_user_assets_concurrently():
         logger.error("No persistent event loop is running!")
         return
 
-    # Schedule the coroutine on the persistent loop
+    # Schedule the coroutine on the persistent loop:
     future = asyncio.run_coroutine_threadsafe(_fetch_user_assets_task(), persistent_loop)
 
-    # This blocks the Celery worker until the async task finishes
-    # which is typically desired (Celery won't see the task as "done" otherwise).
+    # Block until the async function completes (so Celery knows when the task is done)
     result = None
     try:
-        result = future.result()  # gather any return from `_fetch_user_assets_task`
+        result = future.result()
     except Exception as e:
         logger.error(f"Error while running _fetch_user_assets_task: {e}", exc_info=True)
 
