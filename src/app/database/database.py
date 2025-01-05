@@ -12,7 +12,14 @@ else:
 if BASE_DIR.startswith('/home/mrpau'):
     async_engine = create_async_engine(f'postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:5432/{DB_NAME}')
 else:
-    async_engine = create_async_engine(f'postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:5432/{DB_NAME}')
+    async_engine = create_async_engine(
+        f'postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:5432/{DB_NAME}',
+        echo=False,
+        future=True,
+        pool_size=10,        
+        max_overflow=20,
+        pool_timeout=30
+        )
 
 
 async def get_all_tables():
