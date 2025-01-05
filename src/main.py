@@ -142,7 +142,7 @@ async def refresh_token():
 #
 
 @app.get("/balance/overview/{account_id}", description="### Get total assets of all accounts", tags=["Balance"])
-async def get_total_assets(user_id: Annotated[tuple[dict, str], Depends(get_current_active_user)], account_id: Optional[str] = "all"):
+async def get_total_assets(user_id: str, account_id: Optional[str] = "all"):
     proxy = await BrightProxy.create()
 
     # Fetch user accounts

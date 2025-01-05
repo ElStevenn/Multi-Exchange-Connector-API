@@ -10,34 +10,24 @@ from sqlalchemy.exc import IntegrityError, DBAPIError, NoResultFound
 
 from .database import async_engine
 from .models import *
-from .models import Base
 
-if len(sys.argv) > 1 and sys.argv[1] == "test":
-    from src.app.celery_app.db_engine_holder import engine as global_engine
-else:
-    from app.celery_app.db_engine_holder import engine as global_engine
 
-from sqlalchemy.orm import sessionmaker
 
-SessionLocal = sessionmaker(
-    bind=global_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
-
-async def db_connection(func):
+def db_connection(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        async with SessionLocal() as session:
+        async with AsyncSession(async_engine) as session:
             async with session.begin():
                 try:
-                    return await func(session, *args, **kwargs)
+                    result = await func(session, *args, **kwargs)
+                    return result
                 except IntegrityError as e:
                     await session.rollback()
                     raise HTTPException(status_code=400, detail=str(e))
+                # except DBAPIError as e:
+                #     await session.rollback()
+                #     raise HTTPException(status_code=400, detail="There is probably a wrong data type")
     return wrapper
-
-
 
 
 # - - - PROXY - - - 
