@@ -3,6 +3,11 @@
 import sys
 import celery as celery_lib
 from celery.schedules import crontab
+import logging
+
+# Configure logging for better visibility
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 if len(sys.argv) > 1 and sys.argv[1] == "test":
     from src.config import REDIS_URL
@@ -18,16 +23,18 @@ celery_app = celery_lib.Celery(
 
 # General Configuration
 celery_app.conf.update(
-    timezone='UTC', 
+    timezone='UTC',  # Adjust if necessary
     task_default_queue='celery',
     worker_max_tasks_per_child=100
 )
 
 # Celery Beat Schedule
 celery_app.conf.beat_schedule = {
-    'fetch-user-assets-every-5-minutes': {
+    'fetch-user-assets-every-hour': {
         'task': 'app.celery_app.tasks.fetch_user_assets_concurrently',
-        'schedule': crontab(minute='5-55/5'),  # Runs at 5,10,15,...55 minutes past the hour
-        'options': {'queue': 'once_off_queue'},  # Ensure it uses the correct queue
+        'schedule': crontab(minute=0, hour='*'),  # Runs at minute 0 of every hour
+        'options': {'queue': 'once_off_queue'},    # Ensures it uses the correct queue
     },
 }
+
+logger.info("Celery app configured with beat schedule for every hour.")
