@@ -1,8 +1,10 @@
 from fastapi import HTTPException
+from datetime import datetime, timedelta
 from typing import Optional
 from functools import wraps
 from uuid import UUID
 import asyncio
+import numpy as np
 
 from sqlalchemy import select, update, insert, delete, join, and_, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -316,12 +318,50 @@ async def trim_balance_history_per_user(session: AsyncSession, user_id: str, max
         raise
 
 
+# - - - BALANCE HISTORY - - -
+
+@db_connection
+async def get_balance_history(session: AsyncSession, account_id: str, limit: int = None, offset: int = None) -> np.ndarray:
+    """Get balance history for an account not older than 1 year as a NumPy array with optional limit and offset."""
+
+    one_year_ago = datetime.now() - timedelta(days=365)
+
+    query = (
+        select(BalanceAccountHistory)
+        .where(
+            BalanceAccountHistory.account_id == account_id,
+            BalanceAccountHistory.timestamp >= one_year_ago
+        )
+        .order_by(BalanceAccountHistory.timestamp.desc())
+    )
+
+    if offset is not None:
+        query = query.offset(offset)
+    if limit is not None:
+        query = query.limit(limit)
+
+    result = await session.execute(query)
+
+    balance_history = result.scalars().all()
+
+    # Convert to a NumPy array with timestamps in ISO format
+    balance_array = np.array([
+        (
+            balance.timestamp.isoformat(),  
+            balance.balance,
+            balance.usd_value
+        )
+        for balance in balance_history
+    ], dtype=object)
+
+    return balance_array
+
 async def database_crud_testing():
     user_id = "2141ec7d-8156-4462-9a8e-0cf37b11997d"
     account_id = "1530240371"
 
-    result = await get_user_accounts("94615a24-5243-41a3-8f27-5dae288d2c7e")
-    print(result)
+    result = await get_balance_history("1530240371", limit=1, offset=24)
+    print(result); print(len(result)); 
 
 if __name__ == "__main__":
     asyncio.run(database_crud_testing())

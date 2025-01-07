@@ -8,6 +8,7 @@ from ..proxy import BrightProxy
 from .bitget_layer import BitgetLayerConnection
 from .binance_layer import BinanceLayerConnection
 from .kucoin_layer import KucoinLayerConnection
+from ..database.crud import get_balance_history
 
 logger = logging.getLogger(__name__)
 
@@ -67,11 +68,38 @@ async def get_account_balance_(account_id, exchange, proxy: BrightProxy, apikey:
             ip=proxy_ip
         )
 
-        # Get Bitget account balance
-        balance = await bitget_account.account_balance()
+        # Get current account balance
+        current_balance_data = await bitget_account.account_balance()
+        current_balance = current_balance_data['total']
 
-        return balance
+        # Attempt to get the 24h balance, fall back if not available
+        offset_hours = 24
+        previous_balance = None
 
+        while offset_hours > 0:
+            balance_24h_data = await get_balance_history(account_id=account_id, limit=1, offset=offset_hours)
+            
+            if balance_24h_data.size > 0 and balance_24h_data[0][1] is not None:
+                previous_balance = balance_24h_data[0][1]
+                break
+            
+            offset_hours -= 1 
+
+        if previous_balance is None:
+            raise ValueError("Could not retrieve balance history data even after reducing the offset.")
+
+        if previous_balance == 0:
+            raise ValueError("Previous balance is zero, cannot calculate percentage change.")
+
+        balance_24h_percentage_change = ((current_balance - previous_balance) / previous_balance) * 100
+        balance_24h_absolute_change = current_balance - previous_balance
+
+        current_balance_data['24h_change_percentage'] = balance_24h_percentage_change
+        current_balance_data['24h_change'] = balance_24h_absolute_change
+
+        return current_balance_data
+    
+    
     elif exchange == 'binance':
         pass
 

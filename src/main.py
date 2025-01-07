@@ -1,5 +1,6 @@
 from typing import Annotated, Optional
 from datetime import datetime, timedelta, timezone as tz
+from decimal import Decimal
 import asyncio, json
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Response, Depends, Query
@@ -141,8 +142,8 @@ async def refresh_token():
 # Balance
 #
 
-@app.get("/balance/overview/{account_id}", description="### Get total assets of all accounts", tags=["Balance"])
-async def get_total_assets(user_id: str, account_id: Optional[str] = "all"):
+@app.get("/balance/overview/{account_id}", description="### Get an overview of the balance of all accounts", tags=["Balance"])
+async def get_balance_overview(user_id: str, account_id: Optional[str] = "all"):
     proxy = await BrightProxy.create()
 
     # Fetch user accounts
@@ -159,37 +160,70 @@ async def get_total_assets(user_id: str, account_id: Optional[str] = "all"):
 
     # Fetch account balances
     final_result = {
-        "total": 0.0,
-        "accounts": {}
+        "total": Decimal("0.0"),
+        "24h_change": Decimal("0.0"),
+        "24h_change_percentage": Decimal("0.0"),
+        "accounts": []
     }
 
+
     for account in accounts:
-        account_information = await crud.get_account(account_id=account["id"])
-        credentials = await crud.get_account_credentials(account_id=account["id"])
+        try:
+            account_information = await crud.get_account(account_id=account["id"])
+            credentials = await crud.get_account_credentials(account_id=account["id"])
 
-        balance = await get_account_balance_(
-            account_id=account["id"],
-            exchange=credentials["exchange"],
-            proxy=proxy,
-            apikey=credentials.get("apikey"),
-            secret_key=credentials.get("secret_key"),
-            passphrase=credentials.get("passphrase"),
-            proxy_ip=account_information.get("proxy_ip"),
-        )
-        print("Balance response", balance)
+            # Current account balance
+            balance = await get_account_balance_(
+                account_id=account["id"],
+                exchange=credentials.get("exchange"),
+                proxy=proxy,
+                apikey=credentials.get("apikey"),
+                secret_key=credentials.get("secret_key"),
+                passphrase=credentials.get("passphrase"),
+                proxy_ip=account_information.get("proxy_ip"),
+            )
+            
+            if not isinstance(balance, dict) or "total" not in balance or "accounts" not in balance:
+                raise ValueError(f"Invalid balance response for account {account['id']}")
 
-        # Aggregate balances
-        final_result["total"] += balance["total"]
+            # Update total balance
+            current_total = Decimal(str(balance["total"]))
+            final_result["total"] += current_total
 
-        for account_type, amount in balance["accounts"].items():
-            if account_type in final_result["accounts"]:
-                final_result["accounts"][account_type] += amount
-            else:
-                final_result["accounts"][account_type] = amount
+            # Update 24h change
+            if "24h_change" in balance and balance["24h_change"] is not None:
+                final_result["24h_change"] += Decimal(str(balance["24h_change"]))
 
-    return final_result
+            if "24h_change_percentage" in balance and balance["24h_change_percentage"] is not None:
+                final_result["24h_change_percentage"] += Decimal(str(balance["24h_change_percentage"]))
 
-        
+            # Store account-specific data
+            final_result["accounts"].append({
+                "id": account["id"],
+                "total": float(balance["total"]),
+                "24h_change": float(balance.get("24h_change", 0.0)),
+                "24h_change_percentage": float(balance.get("24h_change_percentage", 0.0)),
+                "accounts": {k: float(v) for k, v in balance["accounts"].items()}
+            })
+
+        except Exception as e:
+            print(f"Error processing account {account['id']}: {e}")
+            continue
+
+    return {
+        "total": float(final_result["total"]),
+        "24h_change": float(final_result["24h_change"]),
+        "24h_change_percentage": float(final_result["24h_change_percentage"]),
+        "accounts": final_result["accounts"]  # List of individual account details
+    }
+
+
+@app.get("/balance/history/{account_id}/{interval}", description="### Get total assets of all accounts", tags=["Balance"])
+async def get_balance_history(account_id: str, interval: Optional[str] = "1d"):
+    proxy = await BrightProxy.create()
+
+
+    return {}
 
 #
 # Assets
