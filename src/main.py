@@ -270,11 +270,12 @@ async def get_assets_history(account: str, user_id: Annotated[tuple[str, str], D
 #
 # 3) GENERIC ROUTE for all accounts under {user_id}
 #
-@app.get("/accounts/{user_id}", description="### Get accounts associated to user", tags=["Account Management"])
-async def get_account_info(user_id: str):
-    proxy = await BrightProxy.create()
-    # (sample response for demonstration)
-    return {"user_id": user_id, "message": "Account info retrieved"}
+@app.get("/accounts", description="### Get accounts associated to user", tags=["Account Management"])
+async def get_account_info(user_id: Annotated[tuple[dict, str], Depends(get_current_active_user)]):
+    
+    accounts = await crud.get_accounts(user_id=user_id)
+
+    return [{"id": account["id"], "account_name": account["account_name"]} for account in accounts]
 
 
 @app.put("/accounts/main-account/{account_id}",  description="Set main account", tags=["Account Management"])
