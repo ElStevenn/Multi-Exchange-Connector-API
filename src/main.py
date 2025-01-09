@@ -39,7 +39,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost", "http://localhost:8001"] if DOMAIN else ["https://fundy.pauservices.top/"],
+    allow_origins= ["https://fundy.pauservices.top/"] if DOMAIN else ["http://localhost", "http://localhost:8001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
