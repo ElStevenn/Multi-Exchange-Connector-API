@@ -263,14 +263,12 @@ async def main_test_bitget():
     ip = "58.97.135.175"
 
 
-    # acc_info = await bitget_connection.get_account_information()
-    # print(acc_info)
-
-
-
-    # # Test the "assets" endpoint
-    # acc_assets = await bitget_connection.account_balance()
-    print("Account assets:", acc_assets)
+    bitget_account = BitgetLayerConnection(
+        None, None, None, None
+    )
+    
+    balance = await bitget_account.account_balance()
+    print("Balance: ", balance)
 
 if __name__ == "__main__":
     asyncio.run(main_test_bitget())

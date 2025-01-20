@@ -52,7 +52,7 @@ async def get_used_ips(session: AsyncSession):
 
 # - - - ACCOUNTS - - - 
 @db_connection
-async def register_new_account(session: AsyncSession, user_id: str, account_id: str, email: str, account_name: str, permissions: str,account_type: str = None, proxy_ip: str = None) -> str:
+async def register_new_account(session: AsyncSession, user_id: str, account_id: str, account_name: str, permissions: str,account_type: str = None, proxy_ip: str = None) -> str:
     """Register a new trading account."""
     
     # Check if the account already exists
@@ -63,7 +63,7 @@ async def register_new_account(session: AsyncSession, user_id: str, account_id: 
     if check_acc:
         raise HTTPException(
             status_code=400, 
-            detail=f"Account with email {email} already exists. If you want to update the credentials, try updating."
+            detail=f"Account {account_name} is already asociated to an existing user. If you want to update the credentials, try updating."  
         )
 
     # Set primary trading account type if none is provided
@@ -84,7 +84,6 @@ async def register_new_account(session: AsyncSession, user_id: str, account_id: 
         user_id=UUID(user_id),
         account_name=account_name,
         type=account_type,
-        email=email,
         proxy_ip=proxy_ip,
         account_permissions=permissions
     )
@@ -186,7 +185,7 @@ async def get_user_data(session: AsyncSession, user_id: str):
     if not user:
         return None
     
-    return {"username": user.username, "name": user.name, "surname": user.surname, "email": user.email, "role": user.role}
+    return {"username": user.username, "name": user.name, "email": user.email, "role": user.role}
 
 @db_connection
 async def get_all_users(session: AsyncSession):

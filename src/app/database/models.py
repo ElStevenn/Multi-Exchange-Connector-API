@@ -3,12 +3,9 @@ from sqlalchemy.dialects.postgresql import UUID as pgUUID, JSON
 from sqlalchemy.orm import relationship, declarative_base
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
-import uuid, base64, sys
-
-if len(sys.argv) > 1 and sys.argv[1] == "test":
-    from src.config import PRIVATE_KEY
-else:
-    from config import PRIVATE_KEY
+from src.config import PRIVATE_KEY
+import uuid
+import base64
 
 Base = declarative_base()
 
@@ -18,7 +15,6 @@ class Users(Base):
     id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username = Column(String(255), unique=True, nullable=False)
     name = Column(String(255), nullable=False)
-    surname = Column(String(255), nullable=True)
     email = Column(String(255), unique=True, nullable=False)
     role = Column(String(20), default='user')
     joined_at = Column(DateTime(timezone=True), default=func.now())
@@ -51,15 +47,13 @@ class UserConfiguration(Base):
     id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(pgUUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
     client_timezone = Column(Text, default='Europe/Amsterdam')
-    min_funding_rate_threshold = Column(Float, nullable=True)
-    location = Column(Text, nullable=True)
-    bio = Column(Text, nullable=True)
-    webpage_url = Column(Text, nullable=True)
+    dark_mode = Column(Boolean, nullable=True, default=True) 
     oauth_synced = Column(Boolean, default=True)
     picture_synced = Column(Boolean, default=True)
-    trading_experience = Column(String(20), default='new')
-    main_used_exchange = Column(Text, default="bitget")
     public_email = Column(String(255), nullable=True)
+    currency = Column(String(3), nullable=False, default='usd')
+    language = Column(String(10), nullable=False, default='en')
+    notifications = Column(String(20), nullable=False, default='recent') # 'recent' , 'unread', 'priority'
 
     user = relationship("Users", back_populates="user_configurations")
 

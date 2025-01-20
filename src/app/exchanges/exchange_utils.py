@@ -9,6 +9,7 @@ from .bitget_layer import BitgetLayerConnection
 from .binance_layer import BinanceLayerConnection
 from .kucoin_layer import KucoinLayerConnection
 from ..database.crud import get_balance_history
+from ..utils import generate_id
 
 logger = logging.getLogger(__name__)
 
@@ -40,16 +41,21 @@ async def validate_account(exchange, proxy: BrightProxy, apikey: Optional[str] =
         raise HTTPException(status_code=400, detail="Exchange not supported yet")
 
     elif exchange == 'kucoin':
-       bitget_account = KucoinLayerConnection(
+        kucoin_account = KucoinLayerConnection(
             api_key=apikey,
-            secret_key=secret_key,
+            api_secret_key=secret_key,
             proxy=proxy,
+            passphrase=passphrase,
             ip=proxy_ip
         )
        
-       account_information = await bitget_account.get_account_information()
+        account_information = await kucoin_account.get_account_information()
 
-       return account_information
+        permisions = str(['GeneralFutures', 'TradingSpot', 'TradingKuCoin', 'EarnAllow', 'FlexTransfersMargin', 'Trading'])
+        user_id = generate_id(apikey)
+
+
+        return user_id, permisions
 
     # Return -> account_permisions, account_id | 401 error | 400 error
 
@@ -108,9 +114,17 @@ async def get_account_balance_(account_id, exchange, proxy: BrightProxy, apikey:
         pass
 
     elif exchange == 'kucoin':
-        kucoin_account = None
-        pass
+        kucoin_account = KucoinLayerConnection(
+            api_key=apikey,
+            api_secret_key=secret_key,
+            proxy=proxy,
+            passphrase=passphrase,
+            ip=proxy_ip
+        )
 
+        current_balance_data = await kucoin_account.account_balance()
+
+        return current_balance_data
 
 async def get_asset_price_in_usd(asset: str) -> float:
     """
@@ -153,8 +167,8 @@ async def get_account_assets_(exchange, proxy: BrightProxy, apikey: Optional[str
 
 async def exchange_utils_testing():
     proxy = await BrightProxy().create()
-   
-
+    
+    await get_account_balance_(exchange='', proxy=proxy, apikey='apikey', secret_key='secret_key', passphrase='passphrase', proxy_ip='proxy_ip')
     
 if __name__ == "__main__":
     asyncio.run(exchange_utils_testing())

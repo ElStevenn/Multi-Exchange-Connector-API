@@ -222,6 +222,7 @@ class KucoinLayerConnection:
             raise HTTPException(status_code=400, detail="An error occurred, please try again later")
 
     async def account_balance(self) -> dict:
+        # Fetch spot, margin, and main accounts
         request = "/api/v1/accounts"
         url = f"{self.api_url}{request}"
         headers = self.get_headers("GET", request, {}, {})
@@ -232,39 +233,83 @@ class KucoinLayerConnection:
             headers=headers,
             ip=self.ip
         )
+        
         if response_data.get("code") == "200000":
             balance_list = response_data.get("data", [])
             total_usdt = 0.0
             accounts = {}
+
+            # Initialize specific categories
+            spot_balance = 0.0
+            margin_balance = 0.0
+
             for balance in balance_list:
-                if balance["type"] not in accounts:
-                    accounts[balance["type"]] = 0.0
-                # Summing only USDT
-                if balance["currency"] == "USDT":
-                    accounts[balance["type"]] += float(balance["balance"])
-                    total_usdt += float(balance["balance"])
+                account_type = balance["type"]
+                balance_value = float(balance["balance"])
+                currency = balance["currency"]
+
+                if account_type not in accounts:
+                    accounts[account_type] = 0.0
+
+                if currency == "USDT":
+                    accounts[account_type] += balance_value
+                    total_usdt += balance_value
+
+                    # Sum up spot balances (main + trade)
+                    if account_type in ["main", "trade"]:
+                        spot_balance += balance_value
+
+                    # Sum up margin balances
+                    if account_type == "margin":
+                        margin_balance += balance_value
+
+            # Add explicit categories
+            accounts["spot"] = round(spot_balance, 10)
+            accounts["margin"] = round(margin_balance, 10)
+
+            # Fetch futures account balance from Futures API
+            futures_request = "/api/v1/account-overview"
+            futures_url = f"https://api-futures.kucoin.com{futures_request}"
+            futures_headers = self.get_headers("GET", futures_request, {}, {})  # Futures API headers
+            futures_response = await self.proxy.curl_api(
+                url=futures_url,
+                body={},
+                method="GET",
+                headers=futures_headers,
+                ip=self.ip
+            )
+
+            if futures_response.get("code") == "200000":
+                futures_balance = float(futures_response["data"].get("accountEquity", 0.0))
+                unrealized_pnl = float(futures_response["data"].get("unrealisedPNL", 0.0))
+                accounts["futures"] = round(futures_balance, 10)
+                total_usdt += futures_balance + unrealized_pnl
+            else:
+                accounts["futures"] = 0.0
+
+            # Construct the result
             result = {
-                "total": total_usdt,
-                "accounts": {k: float(v) for k, v in accounts.items()}
+                "total": round(total_usdt, 10),
+                "accounts": {k: round(v, 10) if v >= 1e-10 else 0.0 for k, v in accounts.items()}
             }
             return result
         else:
-            return None
+            return {"error": response_data.get("msg", "Unknown error")}
+
+
+
+
 
 
 async def main_test_kucoin():
     proxy = await BrightProxy.create()
-    ip = "58.97.135.175"
+    ip = "94.139.50.252"
     kucoin_connection = KucoinLayerConnection(
-        api_key="your_api_key",
-        api_secret_key="your_api_secret_key",
-        passphrase="your_passphrase",
-        proxy=proxy,
-        ip=ip
+        None, None, None, None
     )
     # Example usage:
-    # info = await kucoin_connection.get_account_information()
-    # print("Account info:", info)
+    info = await kucoin_connection.account_balance()
+    print("Account info:", info)
 
 if __name__ == "__main__":
     asyncio.run(main_test_kucoin())

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone as tz
 from decimal import Decimal
 import asyncio, json
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Response, Depends, Query
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Response, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -37,9 +37,10 @@ app = FastAPI(
     ),
 )
 
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins= ["https://fundy.pauservices.top/"] if DOMAIN else ["http://localhost", "http://localhost:8001"],
+    allow_origins = ["*"], # ["https://fundy.pauservices.top/"] if DOMAIN else ["http://localhost", "http://localhost:8001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -53,7 +54,12 @@ async def add_new_account(
     user_id: Annotated[tuple[dict, str], Depends(get_current_active_user)],
     request_body: RegisterUser,
     response: Response,
+    request: Request
 ):
+    boddy = await request.body()
+
+    print("the boddy -> ", boddy)
+
     proxy = await BrightProxy.create()
 
     # Validate Proxy IP and get account ID
@@ -70,7 +76,6 @@ async def add_new_account(
     await crud.register_new_account(
         user_id=user_id,
         account_id=account_id,
-        email=request_body.email,
         account_name=request_body.account_name,
         permissions=permissions,
         account_type=None,
@@ -166,56 +171,60 @@ async def get_balance_overview(user_id: Annotated[tuple[dict, str], Depends(get_
         "accounts": []
     }
 
-
+    print(accounts)
     for account in accounts:
-        try:
-            account_information = await crud.get_account(account_id=account["id"])
-            credentials = await crud.get_account_credentials(account_id=account["id"])
+            try:
+                account_information = await crud.get_account(account_id=account["id"])
+                credentials = await crud.get_account_credentials(account_id=account["id"])
 
-            # Current account balance
-            balance = await get_account_balance_(
-                account_id=account["id"],
-                exchange=credentials.get("exchange"),
-                proxy=proxy,
-                apikey=credentials.get("apikey"),
-                secret_key=credentials.get("secret_key"),
-                passphrase=credentials.get("passphrase"),
-                proxy_ip=account_information.get("proxy_ip"),
-            )
-            
-            if not isinstance(balance, dict) or "total" not in balance or "accounts" not in balance:
-                raise ValueError(f"Invalid balance response for account {account['id']}")
+                # Current account balance
+                balance = await get_account_balance_(
+                    account_id=account["id"],
+                    exchange=credentials.get("exchange"),
+                    proxy=proxy,
+                    apikey=credentials.get("apikey"),
+                    secret_key=credentials.get("secret_key"),
+                    passphrase=credentials.get("passphrase"),
+                    proxy_ip=account_information.get("proxy_ip"),
+                )
+                
+                print("the balance -> ",balance)
 
-            # Update total balance
-            current_total = Decimal(str(balance["total"]))
-            final_result["total"] += current_total
+                if not isinstance(balance, dict) or "total" not in balance or "accounts" not in balance:
+                    raise ValueError(f"Invalid balance response for account {account['id']}")
 
-            # Update 24h change
-            if "24h_change" in balance and balance["24h_change"] is not None:
-                final_result["24h_change"] += Decimal(str(balance["24h_change"]))
+                # Update total balance
+                current_total = Decimal(str(balance["total"]))
+                final_result["total"] += current_total
 
-            if "24h_change_percentage" in balance and balance["24h_change_percentage"] is not None:
-                final_result["24h_change_percentage"] += Decimal(str(balance["24h_change_percentage"]))
+                # Update 24h change
+                if "24h_change" in balance and balance["24h_change"] is not None:
+                    final_result["24h_change"] += Decimal(str(balance["24h_change"]))
 
-            # Store account-specific data
-            final_result["accounts"].append({
-                "id": account["id"],
-                "total": float(balance["total"]),
-                "24h_change": float(balance.get("24h_change", 0.0)),
-                "24h_change_percentage": float(balance.get("24h_change_percentage", 0.0)),
-                "accounts": {k: float(v) for k, v in balance["accounts"].items()}
-            })
+                if "24h_change_percentage" in balance and balance["24h_change_percentage"] is not None:
+                    final_result["24h_change_percentage"] += Decimal(str(balance["24h_change_percentage"]))
 
-        except Exception as e:
-            print(f"Error processing account {account['id']}: {e}")
-            continue
+                # Store account-specific data
+                final_result["accounts"].append({
+                    "id": account["id"],
+                    "total": float(balance["total"]),
+                    "24h_change": float(balance.get("24h_change", 0.0)),
+                    "24h_change_percentage": float(balance.get("24h_change_percentage", 0.0)),
+                    "accounts": {k: float(v) for k, v in balance["accounts"].items()}
+                })
+            except Exception as e:
+                print("Error getting account balance for account ", account["id"], e)
 
-    return {
+    response = {
         "total": float(final_result["total"]),
         "24h_change": float(final_result["24h_change"]),
         "24h_change_percentage": float(final_result["24h_change_percentage"]),
         "accounts": final_result["accounts"]  # List of individual account details
     }
+
+    print("final return ",response)
+
+    return  response
 
 
 @app.get("/balance/history/{account_id}/{interval}", description="### Get total assets of all accounts", tags=["Balance"])
