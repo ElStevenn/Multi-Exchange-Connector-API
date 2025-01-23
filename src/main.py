@@ -62,6 +62,12 @@ async def add_new_account(
 
     proxy = await BrightProxy.create()
 
+    # Get available accounts
+    accounts = await crud.get_accounts(user_id=user_id)
+
+    if accounts:
+        await crud.update_register_status(user_id=user_id, register_status="2")
+
     # Validate Proxy IP and get account ID
     account_id, permissions = await validate_account(
         exchange=request_body.exchange,
@@ -90,9 +96,6 @@ async def add_new_account(
         encrypted_passphrase=encrypt_data(request_body.passphrase) if request_body.passphrase else None,
         exchange=request_body.exchange,
     )
-
-    # Get available accounts
-    accounts = await crud.get_accounts(user_id=user_id)
 
     response.set_cookie(
         key="accounts",

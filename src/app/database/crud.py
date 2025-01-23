@@ -355,12 +355,43 @@ async def get_balance_history(session: AsyncSession, account_id: str, limit: int
 
     return balance_array
 
+# - - - USER CONFIGURATION - - - 
+@db_connection
+async def update_register_status(session: AsyncSession, user_id: str, register_status: str):
+    """Update the register status of a user"""
+    try:
+        # Validate the UUID format
+        uuid_account_id = uuid.UUID(user_id) 
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid UUID format: {user_id}")
+    
+    try:
+        # Fetch the user configuration record
+        result = await session.execute(
+            select(UserConfiguration).where(UserConfiguration.user_id == uuid_account_id)
+        )
+        user_conf = result.scalar_one()
+
+        user_conf.register_status = register_status
+        await session.commit()
+
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="UserConfiguration not found")
+    except Exception as e:
+        await session.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 async def database_crud_testing():
     user_id = "2141ec7d-8156-4462-9a8e-0cf37b11997d"
     account_id = "1530240371"
 
-    result = await get_balance_history("1530240371", limit=1, offset=24)
-    print(result); print(len(result)); 
+    result = await get_accounts("94615a24-5243-41a3-8f27-5dae288d2c7a")
+    
+    if result:
+        print("There are account")
+    else:
+        print("There are no account")
 
 if __name__ == "__main__":
     asyncio.run(database_crud_testing())
