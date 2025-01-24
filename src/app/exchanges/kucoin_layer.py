@@ -7,11 +7,30 @@ import hashlib
 import sys
 from typing import Dict
 from fastapi import HTTPException
+from decimal import Decimal, InvalidOperation, ROUND_DOWN
 
 if len(sys.argv) > 1 and sys.argv[1] == "test":
     from src.app.proxy import BrightProxy
 else:
     from app.proxy import BrightProxy
+
+def format_decimal(value: Decimal, precision: Decimal) -> str:
+    """
+    Format a Decimal to a fixed-point string without scientific notation,
+    removing unnecessary trailing zeros and decimal points.
+    """
+    try:
+        # Quantize the value to the specified precision
+        formatted = value.quantize(precision, rounding=ROUND_DOWN).to_eng_string()
+        
+        # Remove trailing zeros and the decimal point if not needed
+        if '.' in formatted:
+            formatted = formatted.rstrip('0').rstrip('.')
+        
+        return formatted
+    except (InvalidOperation, TypeError) as e:
+        return '0'
+
 
 class KucoinLayerConnection:
     def __init__(self, api_key, api_secret_key, passphrase, proxy: BrightProxy, ip: str) -> None:
@@ -87,54 +106,113 @@ class KucoinLayerConnection:
             await self.proxy.remove_ip_blacklist(ip=self.ip)
             raise HTTPException(status_code=400, detail="An error ocurred, please try again later")
 
-    async def furues_assets(self) -> dict:
+    async def future_assets(self) -> dict:
         request = "/api/v1/account-overview"
-        url = f"{self.api_url}{request}"
-        params = {"currency": "USDT"}
-        headers = self.get_headers("GET", request, params, {})
-        response_data = await self.proxy.curl_api(
-            url=url,
-            body=params,
-            method="GET",
-            headers=headers,
-            ip=self.ip
-        )
-        if response_data.get("code") == "200000":
-            return response_data.get("data", None)
-        else:
-            avariable_ip = await self.proxy.get_machine_ip()
-            await self.proxy.remove_ip_blacklist(ip=avariable_ip)
-            raise HTTPException(status_code=400, detail="An error ocurred, please try again later")
+        url = f"https://api-futures.kucoin.com{request}"
+        
+        # Generate headers for the GET request
+        headers = self.get_headers("GET", request, {}, {})
+        
+        try:
+            # Make the GET request with query parameters
+            response_data = await self.proxy.curl_api(
+                url=url,
+                body={},
+                method="GET",
+                headers=headers,
+                ip=self.ip
+            )
 
-    async def spot_assets(self) -> dict:
+            # Check if the response code indicates success
+            if response_data.get("code") == "200000":
+                return response_data.get("data", {})
+            else:
+                # Log the error details
+                error_code = response_data.get("code", "Unknown")
+                error_msg = response_data.get("msg", "No error message provided")
+
+                # Handle IP blacklist removal
+                avariable_ip = await self.proxy.get_machine_ip()
+                await self.proxy.remove_ip_blacklist(ip=avariable_ip)
+                
+                # Raise an exception with detailed error information
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"API Error {error_code}: {error_msg}. Please try again later."
+                )
+            
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail="An unexpected error occurred. Please try again later."
+            )
+
+    async def spot_assets(self) -> list:
+        """Get account assets and whether they are frozen or locked with fixed-point formatting."""
         request = "/api/v1/accounts"
         url = f"{self.api_url}{request}"
         params = {"type": "trade"}
         headers = self.get_headers("GET", request, params, {})
-        response_data = await self.proxy.curl_api(
-            url=url,
-            body=params,
-            method="GET",
-            headers=headers,
-            ip=self.ip
-        )
-        if response_data.get("code") == "200000":
-            asset_list = response_data.get("data", [])
-            assets = []
-            for asset in asset_list:
-                available = float(asset["balance"]) - float(asset["hold"])
-                assets.append({
-                    "symbol": asset["currency"],
-                    "available": str(available),
-                    "limitAvailable": str(available),
-                    "frozen": asset["hold"],
-                    "locked": "0"
-                })
-            return assets
-        else:
+        
+        try:
+            response_data = await self.proxy.curl_api(
+                url=url,
+                body=params,
+                method="GET",
+                headers=headers,
+                ip=self.ip
+            )
+        except Exception as e:
+            # Log the exception
             avariable_ip = await self.proxy.get_machine_ip()
             await self.proxy.remove_ip_blacklist(ip=avariable_ip)
-            raise HTTPException(status_code=400, detail="An error ocurred, please try again later")
+            raise HTTPException(status_code=400, detail=f"API request failed: {e}")
+
+        if response_data.get("code") == "200000":
+            asset_list = response_data.get("data", [])
+
+            assets = []
+            for asset in asset_list:
+                try:
+                    symbol = asset.get("currency", "").upper()
+
+                    # Convert string amounts to Decimal for precise arithmetic
+                    # Ensure that the input is a string to prevent float inaccuracies
+                    balance = Decimal(str(asset.get("balance", "0")))
+                    holds = Decimal(str(asset.get("holds", "0")))
+                    available = balance - holds
+
+                    # Define the precision (8 decimal places)
+                    precision = Decimal('0.00000001')
+
+                    # Format Decimal values to fixed-point strings without scientific notation
+                    available_str = format_decimal(available, precision)
+                    limit_available_str = available_str  # Assuming limitAvailable is the same as available
+                    frozen_str = format_decimal(holds, precision)
+                    locked_str = "0"  # As per your original code
+
+                    # Append the formatted asset
+                    assets.append({
+                        "symbol": symbol,
+                        "available": available_str,
+                        "limitAvailable": limit_available_str,
+                        "frozen": frozen_str,
+                        "locked": locked_str
+                    })
+                except (InvalidOperation, TypeError) as e:
+                    # Handle conversion errors or missing data
+                    continue  # Skip this asset and proceed with others
+
+            return assets
+        else:
+            # Remove machine IP from blacklist, because this was an error it had in the past
+            try:
+                avariable_ip = await self.proxy.get_machine_ip()
+                await self.proxy.remove_ip_blacklist(ip=avariable_ip)
+            except Exception as e:
+                pass
+            raise HTTPException(status_code=400, detail="An error occurred, please try again later")
+
 
     async def margin_assets_summary(self) -> Dict:
         # Cross (Basic) Margin
@@ -305,10 +383,14 @@ async def main_test_kucoin():
     proxy = await BrightProxy.create()
     ip = "94.139.50.252"
     kucoin_connection = KucoinLayerConnection(
-        None, None, None, None
+        api_key="6784c882baf8980001065241",
+        api_secret_key="1bce8d52-f3e8-4d7a-9007-54a299b8a2d4",
+        passphrase="EstoyHastaLosCojones",
+        proxy=proxy,
+        ip=ip
     )
     # Example usage:
-    info = await kucoin_connection.account_balance()
+    info = await kucoin_connection.future_assets()
     print("Account info:", info)
 
 if __name__ == "__main__":

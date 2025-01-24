@@ -7,6 +7,7 @@ import httpx
 import sys
 from typing import Dict
 
+
 from fastapi import HTTPException
 
 if len(sys.argv) > 1 and sys.argv[1] == "test":
@@ -82,7 +83,7 @@ class BitgetLayerConnection():
             await self.proxy.remove_ip_blacklist(ip=self.ip)
             raise HTTPException(status_code=400, detail="An error ocurred, please try again later")
 
-    async def furues_assets(self) -> dict:
+    async def future_assets(self) -> dict:
         """Query all account information under a certain product type"""
         request = "/api/v2/mix/account/accounts"
         url = f"{self.api_url}{request}"
@@ -120,8 +121,6 @@ class BitgetLayerConnection():
             headers=headers,
             ip=self.ip
         )
-
-        print(response_data)
 
         if response_data.get('msg') == 'success':
             asset_list = response_data.get('data', None)
@@ -264,10 +263,14 @@ async def main_test_bitget():
 
 
     bitget_account = BitgetLayerConnection(
-        None, None, None, None
+        api_key="bg_7a55b38c349edfa10c66423cdf0817b0",
+        api_secret_key="c30f1a5b694ebeaa5872f8e48fdcd3273ee961de025d967bc4a1b7b4104119e6",
+        passphrase="EstoyHastaLaPutaPolla",
+        proxy=proxy,
+        ip=ip
     )
     
-    balance = await bitget_account.account_balance()
+    balance = await bitget_account.future_assets()
     print("Balance: ", balance)
 
 if __name__ == "__main__":

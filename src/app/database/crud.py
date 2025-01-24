@@ -155,6 +155,24 @@ async def get_accounts(session: AsyncSession, user_id: str):
     accounts = [{"id": account.account_id, "proxy_ip": account.proxy_ip, "account_name": account.account_name} for account in result]  
     return accounts
 
+@db_connection
+async def get_accounts_detailed(session: AsyncSession, user_id: str):
+    """Get accounts with credentials embedded as separate fields"""
+    accounts = await get_accounts( user_id)
+
+    credentials = await asyncio.gather(
+        *(get_account_credentials(account["id"]) for account in accounts)
+    )
+
+    for account, credential in zip(accounts, credentials):
+        account.update(credential)
+
+    return accounts
+
+
+
+
+
 
 @db_connection
 async def get_account(session: AsyncSession, account_id: str):
@@ -386,12 +404,8 @@ async def database_crud_testing():
     user_id = "2141ec7d-8156-4462-9a8e-0cf37b11997d"
     account_id = "1530240371"
 
-    result = await get_accounts("94615a24-5243-41a3-8f27-5dae288d2c7a")
-    
-    if result:
-        print("There are account")
-    else:
-        print("There are no account")
+    result = await get_accounts_detailed("94615a24-5243-41a3-8f27-5dae288d2c7e")
+    print(result)
 
 if __name__ == "__main__":
     asyncio.run(database_crud_testing())

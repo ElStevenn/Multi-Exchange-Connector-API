@@ -151,10 +151,37 @@ async def get_asset_price_in_usd(asset: str) -> float:
     
 
 async def get_account_assets_(exchange, proxy: BrightProxy, apikey: Optional[str] = None, secret_key: Optional[str] = None, passphrase: Optional[str] = None, proxy_ip: Optional[str] = None):
-    """Get account assets"""
+    """Get account assets of spot, futures and margin accounts"""
     
     if exchange == 'bitget':
-        pass
+        bitget_account = BitgetLayerConnection(
+            api_key=apikey,
+            api_secret_key=secret_key,
+            passphrase=passphrase,
+            proxy=proxy,
+            ip=proxy_ip
+        )
+
+        spot_assets_task = bitget_account.spot_assets()
+        future_assets_task = bitget_account.future_assets()
+        margin_assets_task = bitget_account.margin_assets_summary()
+
+        # Use asyncio.gather to wait for all tasks at once
+        spot_assets, future_assets, margin_assets = await asyncio.gather(
+            spot_assets_task,
+            future_assets_task,
+            margin_assets_task
+        )
+
+        # Combine the results into a dictionary
+        result = {
+            "spot_account": spot_assets,
+            "future_account": future_assets,
+            "margin_account": margin_assets
+        }
+
+        return result
+        
 
     elif exchange == 'binance':
         pass
@@ -163,7 +190,30 @@ async def get_account_assets_(exchange, proxy: BrightProxy, apikey: Optional[str
         pass
 
     elif exchange == 'kucoin':
-       pass
+       kucoin_account = KucoinLayerConnection(
+            api_key=apikey,
+            api_secret_key=secret_key,
+            passphrase=passphrase,
+            proxy=proxy,
+            ip=proxy_ip
+        )
+       
+       spot_assets = kucoin_account.spot_assets()
+       future_assets = kucoin_account.future_assets()
+       margin_assets = None
+
+       spot_assets, future_assets, margin_assets = await asyncio.gather(
+           spot_assets,
+           future_assets,
+           margin_assets
+       )
+
+       result = {
+           
+       }
+
+       return result
+
 
 async def exchange_utils_testing():
     proxy = await BrightProxy().create()

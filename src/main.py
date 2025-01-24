@@ -306,6 +306,30 @@ async def get_account_balance_by_id(account_id: str):
     # Return balance for this specific account
     return {}
 
+@app.get("/accounts//overview",description="### Get overview of all accounts",tags=["Account Management"])
+async def get_account_overview(user_id: str):
+    proxy = await BrightProxy.create()
+
+    accounts = await crud.get_accounts_detailed(user_id=user_id)
+
+    if not accounts:
+        return []
+
+    final_overview = []
+    for account in accounts:
+        assets = await get_account_assets_(
+            account_id=account["id"],
+            exchange=account["exchange_name"],
+            proxy=proxy,
+            apikey=account["apikey"],
+            secret_key=account["secret_key"],
+            passphrase=account["passphrase"],
+            proxy_ip=account["proxy_ip"]
+        )
+
+
+    return {}
+
 
 # ------------------------------------------------------------------------------
 # TRADING OPERATIONS (Internal - Accessed by APIs in the same VPC)
