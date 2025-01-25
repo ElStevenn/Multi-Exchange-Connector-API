@@ -125,7 +125,9 @@ class KucoinLayerConnection:
 
             # Check if the response code indicates success
             if response_data.get("code") == "200000":
+
                 return response_data.get("data", {})
+            
             else:
                 # Log the error details
                 error_code = response_data.get("code", "Unknown")

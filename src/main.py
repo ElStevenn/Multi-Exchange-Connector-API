@@ -20,7 +20,7 @@ from src.app.schemas import (
 )
 from src.app.proxy import BrightProxy
 from src.app.exchanges.bitget_layer import BitgetLayerConnection
-from src.app.exchanges.exchange_utils import validate_account, get_account_balance_, get_account_assets_
+from src.app.exchanges.exchange_utils import validate_account, get_account_balance_, get_account_assets_, get_spot_assets_
 
 from src.config import DOMAIN
 
@@ -300,26 +300,19 @@ async def set_main_account(
     return {}
 
 
-@app.get("/accounts/balance/{account_id}",description="### Get total balance of an explicit account",tags=["Account Management"])
-async def get_account_balance_by_id(account_id: str):
-    proxy = await BrightProxy.create()
-    # Return balance for this specific account
-    return {}
-
 @app.get("/accounts//overview",description="### Get overview of all accounts",tags=["Account Management"])
-async def get_account_overview(user_id: str):
+async def get_account_overview(user_id: Annotated[tuple[dict, str], Depends(get_current_active_user)]):
     proxy = await BrightProxy.create()
 
     accounts = await crud.get_accounts_detailed(user_id=user_id)
 
+   
     if not accounts:
         return []
 
-    final_overview = []
-    for account in accounts:
-        assets = await get_account_assets_(
-            account_id=account["id"],
-            exchange=account["exchange_name"],
+    async def process_account(account):
+        assets = await get_spot_assets_(
+            exchange=account["exchange"],
             proxy=proxy,
             apikey=account["apikey"],
             secret_key=account["secret_key"],
@@ -327,8 +320,32 @@ async def get_account_overview(user_id: str):
             proxy_ip=account["proxy_ip"]
         )
 
+        balance = await get_account_balance_(
+            account_id=account["id"],
+            exchange=account["exchange"],
+            proxy=proxy,
+            apikey=account["apikey"],
+            secret_key=account["secret_key"],
+            passphrase=account["passphrase"],
+            proxy_ip=account["proxy_ip"]
+        )
 
-    return {}
+        return {
+            "id": account["id"],
+            "account_name": account["account_name"],
+            "exchange_name": account["exchange"],
+            "assets": assets,
+            "balance": balance
+        }
+
+    # Use asyncio.gather to concurrently process all accounts
+    final_overview = await asyncio.gather(
+        *(process_account(account) for account in accounts)
+    )
+
+
+
+    return final_overview
 
 
 # ------------------------------------------------------------------------------

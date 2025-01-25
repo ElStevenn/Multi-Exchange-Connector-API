@@ -98,10 +98,17 @@ class BitgetLayerConnection():
         )
         
         if response_data.get('msg') == 'success':
-            account_list = response_data.get('data', None)[0]
+            account_list = []
+            for asset in response_data.get('data', None):
+                account_list.append({
+                    "coin": asset.get("marginCoin"),
+                    "available": asset.get("available"),
+                    "frozen": asset.get("locked"),
+                    "locked": asset.get("locked")
+                })
+
 
             return account_list
-
         else:
         
             # Remove machine IP from blacklist, because this was an error it had in the past
@@ -109,6 +116,8 @@ class BitgetLayerConnection():
             await self.proxy.remove_ip_blacklist(ip=avariable_ip)
             raise HTTPException(status_code=400, detail="An error ocurred, please try again later")
     
+
+
     async def spot_assets(self) -> dict:
         """Get account assets and whether are frozen or locked"""
         request = "/api/v2/spot/account/assets"

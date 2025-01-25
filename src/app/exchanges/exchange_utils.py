@@ -175,9 +175,12 @@ async def get_account_assets_(exchange, proxy: BrightProxy, apikey: Optional[str
 
         # Combine the results into a dictionary
         result = {
-            "spot_account": spot_assets,
-            "future_account": future_assets,
-            "margin_account": margin_assets
+            "exchange": "bitget",
+            "asset_list": {
+                "spot_account": spot_assets,
+                "future_account": future_assets,
+                "margin_account": margin_assets
+            }
         }
 
         return result
@@ -209,10 +212,48 @@ async def get_account_assets_(exchange, proxy: BrightProxy, apikey: Optional[str
        )
 
        result = {
-           
+           "exchange": "kucoin",
+           "asset_list": {
+               "spot_account": spot_assets,
+               "future_account": future_assets,
+               "margin_account": margin_assets
+           }
        }
 
        return result
+
+async def get_spot_assets_(exchange, proxy: BrightProxy, apikey: Optional[str] = None, secret_key: Optional[str] = None, passphrase: Optional[str] = None, proxy_ip: Optional[str] = None):
+    """Get account assets of spot, futures and margin accounts"""
+    
+    if exchange == 'bitget':
+        bitget_account = BitgetLayerConnection(
+            api_key=apikey,
+            api_secret_key=secret_key,
+            passphrase=passphrase,
+            proxy=proxy,
+            ip=proxy_ip
+        )
+
+        spot_assets = await bitget_account.spot_assets()
+
+        return spot_assets
+
+    elif exchange == 'binance':
+        pass
+    elif exchange == 'okx':
+        pass
+    elif exchange == 'kucoin':
+        kucoin_account = KucoinLayerConnection(
+            api_key=apikey,
+            api_secret_key=secret_key,
+            passphrase=passphrase,
+            proxy=proxy,
+            ip=proxy_ip
+        )
+
+        spot_assets = await kucoin_account.spot_assets()
+
+        return spot_assets
 
 
 async def exchange_utils_testing():
