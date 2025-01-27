@@ -213,6 +213,8 @@ async def get_balance_overview(user_id: Annotated[tuple[dict, str], Depends(get_
                     "total": float(balance["total"]),
                     "24h_change": float(balance.get("24h_change", 0.0)),
                     "24h_change_percentage": float(balance.get("24h_change_percentage", 0.0)),
+                    "exchange": credentials.get("exchange", "unknown"),
+                    "account_name": account_information.get('account_name', 'unknown'),
                     "accounts": {k: float(v) for k, v in balance["accounts"].items()}
                 })
             except Exception as e:

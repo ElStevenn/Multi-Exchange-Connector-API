@@ -184,6 +184,7 @@ async def _fetch_assets_for_user(
                 else:
                     logger.error(f"All retry attempts failed for account {account_id}: {e}", exc_info=True)
 
+
 # Entry point for testing
 async def database_crud_testing():
     user_id = "2141ec7d-8156-4462-9a8e-0cf37b11997d"
