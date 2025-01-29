@@ -130,7 +130,11 @@ async def _fetch_assets_for_user(
     secret_key: str = None,
     passphrase: str = None,
     proxy_ip: str = None,
-    asset_price_usd: float = None
+    asset_price_usd: float = None,
+    asset_price_eur: float = None,
+    asset_price_gbp: float = None,
+    asset_price_btc: float = None,
+    asset_price_mxn: float = None
 ):
     """
     Fetch assets for a single user account using the API.
@@ -163,6 +167,9 @@ async def _fetch_assets_for_user(
 
                 total_balance = float(assets.get('total', 0.0))
                 total_usd_value = total_balance * asset_price_usd
+
+                # Proces Diferent currencies
+
 
                 # Save assets to historical metadata
                 await asyncio.gather(

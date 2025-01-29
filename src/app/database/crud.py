@@ -258,13 +258,17 @@ async def add_user_credentials(session: AsyncSession, account_id: str, exchange:
 # - - - HISTORICAL METADATA - - - 
 
 @db_connection
-async def add_futures_historical_metadata(session: AsyncSession, account_id: str, asset: str, balance: float, usd_value: float):
+async def add_futures_historical_metadata(session: AsyncSession, account_id: str, asset: str, balance: float, usd_value: float, eur_value: float, gbp_valu: float, btc_value: float, mxn_value: float):
     """Add futures historical metadata"""
     futures_historical_metadata = FuturesHistory(
         account_id=account_id,
         asset=asset,
         balance=balance,
-        usd_value=usd_value
+        usd_value=usd_value,
+        eur_value=eur_value,
+        gbp_valu=gbp_valu,
+        btc_value=btc_value,
+        mxn_value=mxn_value
     )
 
     session.add(futures_historical_metadata)
@@ -272,13 +276,17 @@ async def add_futures_historical_metadata(session: AsyncSession, account_id: str
     return futures_historical_metadata.id
 
 @db_connection
-async def add_spot_historical_metadata(session: AsyncSession, account_id: str, asset: str, balance: float, usd_value: float):
+async def add_spot_historical_metadata(session: AsyncSession, account_id: str, asset: str, balance: float, usd_value: float, eur_value: float, gbp_valu: float, btc_value: float, mxn_value: float):
     """Add spot historical metadata"""
     spot_historical_metadata = SpotHistory(
         account_id=account_id,
         asset=asset,
         balance=balance,
-        usd_value=usd_value
+        usd_value=usd_value,
+        eur_value=eur_value,
+        gbp_valu=gbp_valu,
+        btc_value=btc_value,
+        mxn_value=mxn_value
     )
 
     session.add(spot_historical_metadata)
@@ -286,13 +294,17 @@ async def add_spot_historical_metadata(session: AsyncSession, account_id: str, a
     return spot_historical_metadata.id
 
 @db_connection
-async def add_balance_historical_metadata(session: AsyncSession, account_id: str, asset: str, balance: float, usd_value: float):
+async def add_balance_historical_metadata(session: AsyncSession, account_id: str, asset: str, balance: float, usd_value: float, eur_value: float, gbp_valu: float, btc_value: float, mxn_value: float):
     """Add balance historical metadata"""
     balance_historical_metadata = BalanceAccountHistory(
         account_id=account_id,
         asset=asset,
         balance=balance,
-        usd_value=usd_value
+        usd_value=usd_value,
+        eur_value=eur_value,
+        gbp_valu=gbp_valu,
+        btc_value=btc_value,
+        mxn_value=mxn_value
     )
 
     session.add(balance_historical_metadata)

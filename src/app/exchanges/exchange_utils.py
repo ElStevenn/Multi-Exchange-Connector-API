@@ -148,7 +148,7 @@ async def get_asset_price_in_usd(asset: str) -> float:
     except Exception as e:
         print(f"Unexpected error fetching price for {asset}: {e}")
         return 0.0
-    
+
 
 async def get_account_assets_(exchange, proxy: BrightProxy, apikey: Optional[str] = None, secret_key: Optional[str] = None, passphrase: Optional[str] = None, proxy_ip: Optional[str] = None):
     """Get account assets of spot, futures and margin accounts"""
