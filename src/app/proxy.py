@@ -53,12 +53,14 @@ class BrightProxy:
         try:
             url = f"{self.base_url}/zone?zone={self.zones[0]}"
             headers = {"Authorization": f"Bearer {BRIGHTDATA_API_TOKEN}"}
+            timeout = httpx.Timeout(30.0, connect=15.0)
             
-            # Custom timeouts: 10s total, 5s for connect
-            timeout = httpx.Timeout(10.0, connect=5.0)
+            logger.debug(f"Attempting API call to: {url}") 
             
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.get(url, headers=headers)
+                logger.debug(f"API response status: {response.status_code}") 
+                logger.debug(f"API response body: {response.text}")
                 if response.status_code == 200:
                     response_data = response.json()
                     passwords = response_data.get("password", None)

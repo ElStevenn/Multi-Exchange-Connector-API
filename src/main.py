@@ -269,6 +269,7 @@ async def get_assets_overview(user_id: Annotated[tuple[str, str], Depends(get_cu
             passphrase=credentials["passphrase"],            
             proxy_ip=account["proxy_ip"]
         )
+        
 
         
 
