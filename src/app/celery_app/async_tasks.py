@@ -173,9 +173,9 @@ async def _fetch_assets_for_user(
 
                 # Save assets to historical metadata
                 await asyncio.gather(
-                    add_spot_historical_metadata(account_id=account_id, asset="usd", balance=spot_balance, usd_value=spot_usd_value),
-                    add_futures_historical_metadata(account_id=account_id, asset="usd", balance=future_balance, usd_value=future_usd_value),
-                    add_balance_historical_metadata(account_id=account_id, asset="usd", balance=total_balance, usd_value=total_usd_value)
+                    add_spot_historical_metadata(account_id=account_id, asset="usd", balance=spot_balance, usd_value=spot_usd_value, eur_value=None, gbp_value=None, btc_value=None, mxn_value=None),
+                    add_futures_historical_metadata(account_id=account_id, asset="usd", balance=future_balance, usd_value=future_usd_value, eur_value=None, gbp_value=None, btc_value=None, mxn_value=None),
+                    add_balance_historical_metadata(account_id=account_id, asset="usd", balance=total_balance, usd_value=total_usd_value, eur_value=None, gbp_value=None, btc_value=None, mxn_value=None)
                 )
 
                 # Trim balance history to maintain record limits per user
