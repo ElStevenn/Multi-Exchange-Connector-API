@@ -32,6 +32,13 @@ class RemoveAccountResponse(BaseModel):
     account_id: UUID4
     message: str
 
+class TransferAssetsBase(BaseModel):
+    account_id: str
+    currency: str
+    from_: str
+    to_: str
+    amount: float
+
 """Operations"""
 class TradeRequest(BaseModel):
     user_ids: List[UUID4]
@@ -74,4 +81,3 @@ class RiskManagementResponse(BaseModel):
     take_profit: float
     leverage_limit: float
     daily_loss_limit: Optional[float]
-

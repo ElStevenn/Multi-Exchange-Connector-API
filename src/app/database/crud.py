@@ -266,7 +266,7 @@ async def add_futures_historical_metadata(session: AsyncSession, account_id: str
         balance=balance,
         usd_value=usd_value,
         eur_value=eur_value,
-        gbp_valu=gbp_valu,
+        gbp_value=gbp_valu,
         btc_value=btc_value,
         mxn_value=mxn_value
     )
@@ -284,7 +284,7 @@ async def add_spot_historical_metadata(session: AsyncSession, account_id: str, a
         balance=balance,
         usd_value=usd_value,
         eur_value=eur_value,
-        gbp_valu=gbp_valu,
+        gbp_value=gbp_valu,
         btc_value=btc_value,
         mxn_value=mxn_value
     )
@@ -302,7 +302,7 @@ async def add_balance_historical_metadata(session: AsyncSession, account_id: str
         balance=balance,
         usd_value=usd_value,
         eur_value=eur_value,
-        gbp_valu=gbp_valu,
+        gbp_value=gbp_valu,
         btc_value=btc_value,
         mxn_value=mxn_value
     )

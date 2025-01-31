@@ -17,6 +17,7 @@ from src.app.schemas import (
     CloseTradeRequest,
     ScheduledTradeRequest,
     SetRiskManagementRequest,
+    TransferAssetsBase
 )
 from src.app.proxy import BrightProxy
 from src.app.exchanges.bitget_layer import BitgetLayerConnection
@@ -302,8 +303,13 @@ async def set_main_account(
     # Logic to set main account
     return {}
 
+@app.post("/accounts/transfer-assets", description="### Transfer assets between accounts", tags=["Account Management"])
+async def transfer_assets(user_id: str, reqiest_boddy: TransferAssetsBase):
+    # Needed fiels: client_id, currency, from (payament account), to (receiving account), amount
 
-@app.get("/accounts//overview",description="### Get overview of all accounts",tags=["Account Management"])
+    return {}
+
+@app.get("/accounts/overview",description="### Get overview of all accounts",tags=["Account Management"])
 async def get_account_overview(user_id: Annotated[tuple[dict, str], Depends(get_current_active_user)]):
     proxy = await BrightProxy.create()
 
